@@ -1,0 +1,33 @@
+name: TimePlace
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.0.0
+targets:
+  TimePlace:
+    type: application
+    platform: iOS
+    sources:
+      - path: TimePlace
+    info:
+      path: TimePlace/Info.plist
+      properties:
+        CFBundleDisplayName: "Time+Place"
+        UILaunchScreen: {}
+        NSCameraUsageDescription: "Time+Place needs camera access to capture your daily photo."
+        UIRequiredDeviceCapabilities: [armv7]
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    settings:
+      base:
+        PRODUCT_NAME: TimePlace
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.timeplace
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: ""
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
