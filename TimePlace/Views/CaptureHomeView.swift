@@ -5,12 +5,13 @@ struct CaptureHomeView: View {
     @StateObject private var camera = CameraManager()
     @State private var showPreview = false
 
-    /// Whether the menu is pinned open (camera slid all the way to the right).
+    /// Whether the menu is fully open.
     @State private var menuIsOpen = false
-    /// Live finger position while dragging, on top of whatever menuIsOpen already is.
+
+    /// The live horizontal drag while the menu is being opened/closed.
     @State private var dragTranslation: CGFloat = 0
 
-    /// The menu takes up the left half of the screen.
+    /// The menu occupies the left half of the screen.
     private let menuWidthFraction: CGFloat = 0.5
 
     var body: some View {
@@ -18,9 +19,11 @@ struct CaptureHomeView: View {
             let menuWidth = geo.size.width * menuWidthFraction
 
             ZStack(alignment: .leading) {
-                // The menu remains interactive while it is open.
+
+                // MENU
+                // This stays underneath the camera but remains fully tappable
+                // when the menu is open.
                 SideMenuView {
-                    // Signing out is independent of menu dismissal.
                     Task {
                         await auth.signOut()
                     }
@@ -29,21 +32,44 @@ struct CaptureHomeView: View {
                 .frame(maxHeight: .infinity)
                 .zIndex(0)
 
+                // CAMERA
                 cameraContent
                     .frame(width: geo.size.width, height: geo.size.height)
                     .offset(x: currentOffset(menuWidth: menuWidth))
+                    // IMPORTANT:
+                    // When the menu is open, the camera must not intercept
+                    // taps intended for the menu.
+                    .allowsHitTesting(!menuIsOpen)
                     .shadow(
                         color: .black.opacity(isShifted ? 0.4 : 0),
                         radius: 16,
                         x: -4
                     )
-                    .overlay(closeOverlay)
                     .zIndex(1)
+
+                // ONLY the visible camera area can close the menu by tapping.
+                if menuIsOpen {
+                    HStack(spacing: 0) {
+                        Spacer()
+
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                setMenuOpen(false)
+                            }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .zIndex(2)
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
             .ignoresSafeArea()
-            // Swipe handling is on the container so a left swipe can close
-            // the menu without making the menu itself dismiss on a tap.
-            .simultaneousGesture(dragGesture(menuWidth: menuWidth))
+
+            // This gesture belongs to the container, not the menu button
+            // or camera controls.
+            .simultaneousGesture(
+                dragGesture(menuWidth: menuWidth)
+            )
         }
     }
 
@@ -73,23 +99,6 @@ struct CaptureHomeView: View {
         }
     }
 
-    /// Only the visible camera portion can dismiss the menu by tapping.
-    /// The menu itself is not covered by this overlay.
-    @ViewBuilder
-    private var closeOverlay: some View {
-        if menuIsOpen {
-            HStack(spacing: 0) {
-                Spacer()
-
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        setMenuOpen(false)
-                    }
-            }
-        }
-    }
-
     private var isShifted: Bool {
         menuIsOpen || dragTranslation != 0
     }
@@ -104,13 +113,16 @@ struct CaptureHomeView: View {
                 let horizontal = value.translation.width
                 let vertical = value.translation.height
 
-                guard abs(horizontal) > abs(vertical) else { return }
+                // Only react to predominantly horizontal gestures.
+                guard abs(horizontal) > abs(vertical) else {
+                    return
+                }
 
                 if menuIsOpen {
-                    // Only allow dragging left, toward the camera.
+                    // Menu is open: only allow movement back to the left.
                     dragTranslation = min(0, max(-menuWidth, horizontal))
                 } else {
-                    // Only allow dragging right, to reveal the menu.
+                    // Menu is closed: only allow movement to the right.
                     dragTranslation = max(0, min(menuWidth, horizontal))
                 }
             }
@@ -119,11 +131,11 @@ struct CaptureHomeView: View {
                 let threshold = menuWidth * 0.3
 
                 if menuIsOpen {
-                    // Left swipe beyond the threshold closes the menu.
-                    setMenuOpen(horizontal <= -threshold)
+                    // A left swipe closes the menu.
+                    setMenuOpen(horizontal < -threshold)
                 } else {
-                    // Right swipe beyond the threshold opens the menu.
-                    setMenuOpen(horizontal >= threshold)
+                    // A right swipe opens the menu.
+                    setMenuOpen(horizontal > threshold)
                 }
 
                 dragTranslation = 0
