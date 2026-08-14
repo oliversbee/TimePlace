@@ -28,7 +28,7 @@ final class SupabaseManager {
 
         try await client.storage
             .from("posts")
-            .upload(path: fileName, file: data, options: FileOptions(contentType: "image/jpeg"))
+            .upload(fileName, data: data, options: FileOptions(contentType: "image/jpeg"))
 
         let publicURL = try client.storage.from("posts").getPublicURL(path: fileName)
 
