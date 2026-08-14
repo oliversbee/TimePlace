@@ -26,9 +26,9 @@ struct CaptureHomeView: View {
 
                 cameraContent
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .overlay(closeOverlay) // Moved BEFORE .offset so it slides with cameraContent
                     .offset(x: currentOffset(menuWidth: menuWidth))
                     .shadow(color: .black.opacity(isShifted ? 0.4 : 0), radius: 16, x: -4)
-                    .overlay(closeOverlay)
                     .simultaneousGesture(dragGesture(menuWidth: menuWidth))
             }
             .ignoresSafeArea()
