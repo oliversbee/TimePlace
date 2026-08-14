@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// The white side menu revealed when the camera is dragged to the right.
+/// The menu revealed behind the camera when the user drags it to the right.
+/// For now this is just a Sign Out button — more menu items can be added
+/// above it later.
 struct SideMenuView: View {
     var onSignOut: () -> Void
 
@@ -8,38 +10,28 @@ struct SideMenuView: View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
 
-            // Future menu items can go here.
+            // TODO: real menu items go here (settings, profile, etc.)
 
             Spacer()
 
-            Button {
-                // Do NOT close the menu here.
-                // Signing out changes the authentication state, which causes
-                // the app's root view to return to the login screen.
+            Button(role: .destructive) {
                 onSignOut()
             } label: {
-                HStack(spacing: 10) {
+                HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
-
                     Text("Sign Out")
                         .fontWeight(.semibold)
-
-                    Spacer()
                 }
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             }
-            // Plain prevents SwiftUI's bordered button style from producing
-            // the unwanted white/filled bar seen at the bottom.
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
+            .buttonStyle(.bordered)
+            .tint(.white)
+            .foregroundColor(.white)
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.white)
-        .contentShape(Rectangle())
+        .background(Color.black)
     }
 }
