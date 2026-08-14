@@ -18,20 +18,32 @@ struct CaptureHomeView: View {
             let menuWidth = geo.size.width * menuWidthFraction
 
             ZStack(alignment: .leading) {
+                // The menu remains interactive while it is open.
                 SideMenuView {
-                    Task { await auth.signOut() }
+                    // Signing out is independent of menu dismissal.
+                    Task {
+                        await auth.signOut()
+                    }
                 }
                 .frame(width: menuWidth)
                 .frame(maxHeight: .infinity)
+                .zIndex(0)
 
                 cameraContent
                     .frame(width: geo.size.width, height: geo.size.height)
                     .offset(x: currentOffset(menuWidth: menuWidth))
-                    .shadow(color: .black.opacity(isShifted ? 0.4 : 0), radius: 16, x: -4)
+                    .shadow(
+                        color: .black.opacity(isShifted ? 0.4 : 0),
+                        radius: 16,
+                        x: -4
+                    )
                     .overlay(closeOverlay)
-                    .simultaneousGesture(dragGesture(menuWidth: menuWidth))
+                    .zIndex(1)
             }
             .ignoresSafeArea()
+            // Swipe handling is on the container so a left swipe can close
+            // the menu without making the menu itself dismiss on a tap.
+            .simultaneousGesture(dragGesture(menuWidth: menuWidth))
         }
     }
 
@@ -61,21 +73,25 @@ struct CaptureHomeView: View {
         }
     }
 
-    /// Invisible tap-catcher shown only while the menu is open, so a tap
-    /// anywhere on the (now partially visible) camera closes the menu
-    /// instead of e.g. firing the shutter.
+    /// Only the visible camera portion can dismiss the menu by tapping.
+    /// The menu itself is not covered by this overlay.
     @ViewBuilder
     private var closeOverlay: some View {
         if menuIsOpen {
-            Color.black.opacity(0.001)
-                .onTapGesture {
-                    setMenuOpen(false)
-                }
+            HStack(spacing: 0) {
+                Spacer()
+
+                Color.black.opacity(0.001)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        setMenuOpen(false)
+                    }
+            }
         }
     }
 
     private var isShifted: Bool {
-        menuIsOpen || dragTranslation > 0
+        menuIsOpen || dragTranslation != 0
     }
 
     private func currentOffset(menuWidth: CGFloat) -> CGFloat {
@@ -87,14 +103,14 @@ struct CaptureHomeView: View {
             .onChanged { value in
                 let horizontal = value.translation.width
                 let vertical = value.translation.height
-                // Ignore mostly-vertical drags so they don't fight other gestures.
+
                 guard abs(horizontal) > abs(vertical) else { return }
 
                 if menuIsOpen {
-                    // Only allow dragging back left, toward closed.
+                    // Only allow dragging left, toward the camera.
                     dragTranslation = min(0, max(-menuWidth, horizontal))
                 } else {
-                    // Only allow dragging right, toward open.
+                    // Only allow dragging right, to reveal the menu.
                     dragTranslation = max(0, min(menuWidth, horizontal))
                 }
             }
@@ -103,10 +119,13 @@ struct CaptureHomeView: View {
                 let threshold = menuWidth * 0.3
 
                 if menuIsOpen {
-                    setMenuOpen(horizontal > -threshold)
+                    // Left swipe beyond the threshold closes the menu.
+                    setMenuOpen(horizontal <= -threshold)
                 } else {
-                    setMenuOpen(horizontal > threshold)
+                    // Right swipe beyond the threshold opens the menu.
+                    setMenuOpen(horizontal >= threshold)
                 }
+
                 dragTranslation = 0
             }
     }
