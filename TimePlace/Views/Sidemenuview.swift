@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// The menu revealed behind the camera when the user drags it to the right.
-/// For now this is just a Sign Out button — more menu items can be added
-/// above it later.
+/// The menu remains fully interactive while it is open.
 struct SideMenuView: View {
     var onSignOut: () -> Void
 
@@ -14,24 +13,25 @@ struct SideMenuView: View {
 
             Spacer()
 
-            Button(role: .destructive) {
+            Button {
                 onSignOut()
             } label: {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
+
                     Text("Sign Out")
                         .fontWeight(.semibold)
                 }
+                .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             }
             .buttonStyle(.bordered)
-            .tint(.white)
-            .foregroundColor(.white)
+            .tint(.black)
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.black)
+        .background(Color.white)
     }
 }
