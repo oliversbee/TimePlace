@@ -4,6 +4,7 @@ struct CaptureHomeView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var camera = CameraManager()
     @State private var showPreview = false
+    @State private var showSettings = false
 
     /// Whether the menu is pinned open (camera slid all the way to the right).
     @State private var menuIsOpen = false
@@ -18,9 +19,10 @@ struct CaptureHomeView: View {
             let menuWidth = geo.size.width * menuWidthFraction
 
             ZStack(alignment: .leading) {
-                SideMenuView {
-                    Task { await auth.signOut() }
-                }
+                SideMenuView(
+                    onOpenSettings: { showSettings = true },
+                    onSignOut: { Task { await auth.signOut() } }
+                )
                 .frame(width: menuWidth)
                 .frame(maxHeight: .infinity)
 
@@ -32,6 +34,10 @@ struct CaptureHomeView: View {
                     .simultaneousGesture(dragGesture(menuWidth: menuWidth))
             }
             .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .environmentObject(auth)
         }
     }
 

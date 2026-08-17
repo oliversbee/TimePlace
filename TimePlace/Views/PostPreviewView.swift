@@ -81,15 +81,11 @@ struct PostPreviewView: View {
 
         Task {
             do {
-                // Only flatten the two images together if there's a second one —
-                // single-camera captures upload as-is.
-                let imageToUpload: UIImage
-                if let secondaryImage {
-                    imageToUpload = ImageCompositor.composite(main: mainImage, corner: secondaryImage)
-                } else {
-                    imageToUpload = mainImage
-                }
-                try await SupabaseManager.shared.uploadPost(userId: userId, image: imageToUpload)
+                try await SupabaseManager.shared.uploadImages(
+                    userId: userId,
+                    mainImage: mainImage,
+                    secondaryImage: secondaryImage
+                )
                 isUploading = false
                 onUploaded()
             } catch {
