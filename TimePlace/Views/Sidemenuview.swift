@@ -32,8 +32,10 @@ struct SideMenuView: View {
             } label: {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .foregroundStyle(.red)
                     Text("Sign Out")
                         .fontWeight(.semibold)
+                        .foregroundStyle(.red)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
