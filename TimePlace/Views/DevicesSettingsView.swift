@@ -53,7 +53,7 @@ struct DevicesSettingsView: View {
             }
         }
         .navigationTitle("Devices")
-        .sheet(item: $selectedDevice) { device in
+        .sheet(item: $selectedDevice) { (device: PairedDevice) in
             DisplayConfigView(device: device)
                 .environmentObject(auth)
         }
