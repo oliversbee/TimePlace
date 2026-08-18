@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// The menu revealed behind the camera when the user drags it to the right.
+/// The menu revealed when tapping the top-left burger menu button.
 struct SideMenuView: View {
     var onOpenSettings: () -> Void
     var onSignOut: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
             Spacer()
 
             Button {
@@ -17,11 +17,8 @@ struct SideMenuView: View {
                     Text("Settings")
                         .fontWeight(.semibold)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 10)
             }
-            .buttonStyle(.bordered)
-            .tint(.white)
             .foregroundColor(.white)
             .padding(.horizontal, 24)
 
@@ -32,10 +29,8 @@ struct SideMenuView: View {
             } label: {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .foregroundStyle(.red)
                     Text("Sign Out")
                         .fontWeight(.semibold)
-                        .foregroundStyle(.red)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
