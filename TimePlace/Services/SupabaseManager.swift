@@ -62,21 +62,45 @@ final class SupabaseManager {
 
     // MARK: - Preferences
 
-    func fetchPreferences(userId: UUID) async throws -> UserPreferences {
-        try await client
+    func fetchPreferences(userId: UUID) async throws -> UserPreferences? {
+        let rows: [UserPreferences] = try await client
             .from("user_preferences")
             .select()
             .eq("user_id", value: userId)
-            .single()
+            .limit(1)
             .execute()
             .value
+
+        return rows.first
     }
 
+    /// Saves the complete preference row. Upsert means this works whether the
+    /// user's preferences row already exists or needs to be created.
     func updatePreferences(userId: UUID, preferences: UpdatedPreferences) async throws {
+        struct PreferencesPayload: Encodable {
+            let userId: UUID
+            let displayName: String?
+            let imageIntervalSeconds: Int
+            let showOwnImage: Bool
+
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case displayName = "display_name"
+                case imageIntervalSeconds = "image_interval_seconds"
+                case showOwnImage = "show_own_image"
+            }
+        }
+
+        let payload = PreferencesPayload(
+            userId: userId,
+            displayName: preferences.displayName,
+            imageIntervalSeconds: preferences.imageIntervalSeconds,
+            showOwnImage: preferences.showOwnImage
+        )
+
         try await client
             .from("user_preferences")
-            .update(preferences)
-            .eq("user_id", value: userId)
+            .upsert(payload, onConflict: "user_id")
             .execute()
     }
 
