@@ -40,7 +40,7 @@ struct HouseholdsSettingsView: View {
             if showJoinSection {
                 Section("Enter Join Code") {
                     TextField("6-character code", text: $joinCode)
-                        .autocapitalize(.allCharacters)
+                        .textInputAutocapitalization(.characters)
                     Button("Submit Code") {
                         Task {
                             if await manager.joinHousehold(code: joinCode) {

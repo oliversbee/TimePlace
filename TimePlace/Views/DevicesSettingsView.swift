@@ -39,7 +39,7 @@ struct DevicesSettingsView: View {
 
             Section("Pair New Display") {
                 TextField("6-character display code", text: $deviceClaimCode)
-                    .autocapitalize(.allCharacters)
+                    .textInputAutocapitalization(.characters)
                 
                 Button("Link Device") {
                     Task {
