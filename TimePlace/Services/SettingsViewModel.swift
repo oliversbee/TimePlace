@@ -33,23 +33,39 @@ final class SettingsViewModel: ObservableObject {
     func loadData(currentUserId: UUID) async {
         errorMessage = nil
 
+        // Preferences are loaded independently so a problem with family
+        // member/nickname data does not prevent the main preferences screen
+        // from loading.
         do {
-            // Load the user's saved preferences.
-            let preferences = try await supabase.fetchPreferences(userId: currentUserId)
+            if let preferences = try await supabase.fetchPreferences(userId: currentUserId) {
+                displayName = preferences.displayName ?? ""
+                showOwnImage = preferences.showOwnImage
+                imageIntervalSeconds = preferences.imageIntervalSeconds
+            }
+        } catch {
+            errorMessage = "Failed to load preferences: \(error.localizedDescription)"
+            return
+        }
 
-            displayName = preferences.displayName ?? ""
-            showOwnImage = preferences.showOwnImage
-            imageIntervalSeconds = preferences.imageIntervalSeconds
-
-            // Load the other family members and the user's per-member settings.
+        // The following are used by the other settings screens.
+        do {
             familyMembers = try await supabase
                 .fetchHouseholdMembers(excluding: currentUserId)
                 .map { FamilyMember(id: $0.id, name: $0.name ?? "") }
+        } catch {
+            errorMessage = "Failed to load family members: \(error.localizedDescription)"
+        }
 
+        do {
             hiddenUserIds = try await supabase.fetchHiddenUserIds(userId: currentUserId)
+        } catch {
+            errorMessage = "Failed to load hidden users: \(error.localizedDescription)"
+        }
+
+        do {
             nicknames = try await supabase.fetchNicknames(viewerId: currentUserId)
         } catch {
-            errorMessage = "Failed to load preferences: \(error.localizedDescription)"
+            errorMessage = "Failed to load nicknames: \(error.localizedDescription)"
         }
     }
 
@@ -59,10 +75,10 @@ final class SettingsViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
 
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+
         let preferences = UpdatedPreferences(
-            displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? nil
-                : displayName.trimmingCharacters(in: .whitespacesAndNewlines),
+            displayName: trimmedDisplayName.isEmpty ? nil : trimmedDisplayName,
             imageIntervalSeconds: imageIntervalSeconds,
             showOwnImage: showOwnImage
         )
