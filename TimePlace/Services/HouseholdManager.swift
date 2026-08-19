@@ -47,20 +47,6 @@ struct UserNickname: Codable {
     }
 }
 
-
-// MARK: - Hidden User
-
-struct HiddenUser: Codable {
-    let userId: UUID
-    let hiddenUserId: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case hiddenUserId = "hidden_user_id"
-    }
-}
-
-
 // MARK: - Paired Device
 
 struct PairedDevice: Identifiable, Codable {
@@ -378,128 +364,136 @@ final class HouseholdManager: ObservableObject {
     }
 
 
-    // MARK: - Hidden Users
+// MARK: - Hidden Users
 
-    func fetchHiddenUsers() async -> Set<UUID> {
+func fetchHiddenUsers() async -> Set<UUID> {
 
-        guard let userId = client.auth.currentUser?.id else {
-            return []
-        }
-
-        do {
-
-            let hiddenUsers: [HiddenUser] = try await client
-                .from("hidden_users")
-                .select()
-                .eq(
-                    "user_id",
-                    value: userId
-                )
-                .execute()
-                .value
-
-            return Set(
-                hiddenUsers.map {
-                    $0.hiddenUserId
-                }
-            )
-
-        } catch {
-
-            print(
-                "Failed to load hidden users:",
-                error
-            )
-
-            return []
-        }
+    guard let userId = client.auth.currentUser?.id else {
+        return []
     }
 
+    do {
 
-    // MARK: - Hide User
+        struct HiddenUserRow: Decodable {
+            let hiddenUserId: UUID
 
-    func hideUser(
-        targetUserId: UUID
-    ) async -> Bool {
-
-        guard let userId = client.auth.currentUser?.id else {
-            errorMessage = "Not authenticated."
-            return false
-        }
-
-        do {
-
-            struct HiddenUserInsert: Encodable {
-                let user_id: UUID
-                let hidden_user_id: UUID
+            enum CodingKeys: String, CodingKey {
+                case hiddenUserId = "hidden_user_id"
             }
-
-            try await client
-                .from("hidden_users")
-                .insert(
-                    HiddenUserInsert(
-                        user_id: userId,
-                        hidden_user_id: targetUserId
-                    )
-                )
-                .execute()
-
-            return true
-
-        } catch {
-
-            print(
-                "Failed to hide user:",
-                error
-            )
-
-            errorMessage = "Failed to hide user."
-
-            return false
         }
+
+        let hiddenUsers: [HiddenUserRow] = try await client
+            .from("hidden_users")
+            .select("hidden_user_id")
+            .eq(
+                "user_id",
+                value: userId
+            )
+            .execute()
+            .value
+
+        return Set(
+            hiddenUsers.map {
+                $0.hiddenUserId
+            }
+        )
+
+    } catch {
+
+        print(
+            "Failed to load hidden users:",
+            error
+        )
+
+        return []
+    }
+}
+
+
+// MARK: - Hide User
+
+func hideUser(
+    targetUserId: UUID
+) async -> Bool {
+
+    guard let userId = client.auth.currentUser?.id else {
+        errorMessage = "Not authenticated."
+        return false
     }
 
+    do {
 
-    // MARK: - Unhide User
-
-    func unhideUser(
-        targetUserId: UUID
-    ) async -> Bool {
-
-        guard let userId = client.auth.currentUser?.id else {
-            errorMessage = "Not authenticated."
-            return false
+        struct HiddenUserInsert: Encodable {
+            let user_id: UUID
+            let hidden_user_id: UUID
         }
 
-        do {
-
-            try await client
-                .from("hidden_users")
-                .delete()
-                .eq(
-                    "user_id",
-                    value: userId
+        try await client
+            .from("hidden_users")
+            .insert(
+                HiddenUserInsert(
+                    user_id: userId,
+                    hidden_user_id: targetUserId
                 )
-                .eq(
-                    "hidden_user_id",
-                    value: targetUserId
-                )
-                .execute()
-
-            return true
-
-        } catch {
-
-            print(
-                "Failed to unhide user:",
-                error
             )
+            .execute()
 
-            errorMessage = "Failed to unhide user."
+        return true
 
-            return false
-        }
+    } catch {
+
+        print(
+            "Failed to hide user:",
+            error
+        )
+
+        errorMessage = "Failed to hide user."
+
+        return false
     }
+}
+
+
+// MARK: - Unhide User
+
+func unhideUser(
+    targetUserId: UUID
+) async -> Bool {
+
+    guard let userId = client.auth.currentUser?.id else {
+        errorMessage = "Not authenticated."
+        return false
+    }
+
+    do {
+
+        try await client
+            .from("hidden_users")
+            .delete()
+            .eq(
+                "user_id",
+                value: userId
+            )
+            .eq(
+                "hidden_user_id",
+                value: targetUserId
+            )
+            .execute()
+
+        return true
+
+    } catch {
+
+        print(
+            "Failed to unhide user:",
+            error
+        )
+
+        errorMessage = "Failed to unhide user."
+
+        return false
+    }
+}
 
 
     // MARK: - Leave Household
