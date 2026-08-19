@@ -90,6 +90,10 @@ final class HouseholdManager: ObservableObject {
 
     private let client = SupabaseManager.shared.client
 
+    var currentUserId: UUID? {
+    client.auth.currentUser?.id
+    }
+
 
     // MARK: - Households
 
@@ -366,42 +370,56 @@ final class HouseholdManager: ObservableObject {
 
 // MARK: - Hidden Users
 
-func fetchHiddenUsers() async -> Set<UUID> {
-
-    guard let userId = client.auth.currentUser?.id else {
-        return []
-    }
+func fetchHouseholdMembers(
+    householdId: UUID
+) async -> [HouseholdMember] {
 
     do {
 
-        struct HiddenUserRow: Decodable {
-            let hiddenUserId: UUID
+        struct MemberRow: Decodable {
+            let userId: UUID
+            let user: UserProfile?
 
             enum CodingKeys: String, CodingKey {
-                case hiddenUserId = "hidden_user_id"
+                case userId = "user_id"
+                case user = "users"
             }
         }
 
-        let hiddenUsers: [HiddenUserRow] = try await client
-            .from("hidden_users")
-            .select("hidden_user_id")
+        struct UserProfile: Decodable {
+            let id: UUID
+            let name: String?
+        }
+
+        let rows: [MemberRow] = try await client
+            .from("household_members")
+            .select(
+                """
+                user_id,
+                users (
+                    id,
+                    name
+                )
+                """
+            )
             .eq(
-                "user_id",
-                value: userId
+                "household_id",
+                value: householdId
             )
             .execute()
             .value
 
-        return Set(
-            hiddenUsers.map {
-                $0.hiddenUserId
-            }
-        )
+        return rows.map { row in
+            HouseholdMember(
+                userId: row.userId,
+                name: row.user?.name
+            )
+        }
 
     } catch {
 
         print(
-            "Failed to load hidden users:",
+            "Failed to load household members:",
             error
         )
 

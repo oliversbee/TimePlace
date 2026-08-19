@@ -17,10 +17,16 @@ struct HouseholdMembersView: View {
     @State private var showingRenameSheet = false
 
     var visibleMembers: [HouseholdMember] {
-        members.filter { member in
-            !hiddenUsers.contains(member.userId)
-        }
+
+    guard let currentUserId = manager.currentUserId else {
+        return []
     }
+
+    return members.filter { member in
+        member.userId != currentUserId &&
+        !hiddenUsers.contains(member.userId)
+    }
+}
 
     var body: some View {
 
