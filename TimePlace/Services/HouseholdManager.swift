@@ -194,64 +194,50 @@ final class HouseholdManager: ObservableObject {
     }
 
 
-    // MARK: - Household Members
+// MARK: - Hidden Users
 
-    func fetchHouseholdMembers(
-        householdId: UUID
-    ) async -> [HouseholdMember] {
+func fetchHiddenUsers() async -> Set<UUID> {
 
-        do {
-
-            struct MemberRow: Decodable {
-                let userId: UUID
-                let user: UserProfile?
-
-                enum CodingKeys: String, CodingKey {
-                    case userId = "user_id"
-                    case user
-                }
-            }
-
-            struct UserProfile: Decodable {
-                let id: UUID
-                let name: String?
-            }
-
-            let rows: [MemberRow] = try await client
-                .from("household_members")
-                .select(
-                    """
-                    user_id,
-                    users (
-                        id,
-                        name
-                    )
-                    """
-                )
-                .eq(
-                    "household_id",
-                    value: householdId
-                )
-                .execute()
-                .value
-
-            return rows.map {
-                HouseholdMember(
-                    userId: $0.userId,
-                    name: $0.user?.name
-                )
-            }
-
-        } catch {
-
-            print(
-                "Failed to load household members:",
-                error
-            )
-
-            return []
-        }
+    guard let userId = client.auth.currentUser?.id else {
+        return []
     }
+
+    do {
+
+        struct HiddenUserRow: Decodable {
+            let hiddenUserId: UUID
+
+            enum CodingKeys: String, CodingKey {
+                case hiddenUserId = "hidden_user_id"
+            }
+        }
+
+        let hiddenUsers: [HiddenUserRow] = try await client
+            .from("hidden_users")
+            .select("hidden_user_id")
+            .eq(
+                "user_id",
+                value: userId
+            )
+            .execute()
+            .value
+
+        return Set(
+            hiddenUsers.map {
+                $0.hiddenUserId
+            }
+        )
+
+    } catch {
+
+        print(
+            "Failed to load hidden users:",
+            error
+        )
+
+        return []
+    }
+}
 
 
     // MARK: - Nicknames
@@ -366,67 +352,6 @@ final class HouseholdManager: ObservableObject {
             return false
         }
     }
-
-
-// MARK: - Hidden Users
-
-func fetchHouseholdMembers(
-    householdId: UUID
-) async -> [HouseholdMember] {
-
-    do {
-
-        struct MemberRow: Decodable {
-            let userId: UUID
-            let user: UserProfile?
-
-            enum CodingKeys: String, CodingKey {
-                case userId = "user_id"
-                case user = "users"
-            }
-        }
-
-        struct UserProfile: Decodable {
-            let id: UUID
-            let name: String?
-        }
-
-        let rows: [MemberRow] = try await client
-            .from("household_members")
-            .select(
-                """
-                user_id,
-                users (
-                    id,
-                    name
-                )
-                """
-            )
-            .eq(
-                "household_id",
-                value: householdId
-            )
-            .execute()
-            .value
-
-        return rows.map { row in
-            HouseholdMember(
-                userId: row.userId,
-                name: row.user?.name
-            )
-        }
-
-    } catch {
-
-        print(
-            "Failed to load household members:",
-            error
-        )
-
-        return []
-    }
-}
-
 
 // MARK: - Hide User
 
