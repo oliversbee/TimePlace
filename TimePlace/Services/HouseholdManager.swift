@@ -27,14 +27,21 @@ struct PairedDevice: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        deviceId = try container.decode(String.self, forKey: .deviceId)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-            ?? "E-Paper Display"
+        deviceId = try container.decode(
+            String.self,
+            forKey: .deviceId
+        )
+
+        name = try container.decodeIfPresent(
+            String.self,
+            forKey: .name
+        ) ?? "E-Paper Display"
     }
 }
 
 @MainActor
 final class HouseholdManager: ObservableObject {
+
     @Published var households: [Household] = []
     @Published var pairedDevices: [PairedDevice] = []
     @Published var isLoading = false
@@ -55,27 +62,9 @@ final class HouseholdManager: ObservableObject {
                 .execute()
                 .value
         } catch {
+            print("Failed to load households:", error)
+
             errorMessage = "Failed to load households."
-        }
-
-        isLoading = false
-    }
-
-    // MARK: - Devices
-
-    func fetchPairedDevices() async {
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            pairedDevices = try await client
-                .from("device_claims")
-                .select("device_id")
-                .not("assigned_user_id", operator: .is, value: "null")
-                .execute()
-                .value
-        } catch {
-            errorMessage = "Failed to load paired devices."
         }
 
         isLoading = false
@@ -88,22 +77,17 @@ final class HouseholdManager: ObservableObject {
         errorMessage = nil
 
         do {
-            struct CreateParams: Encodable {
-                let name: String
-                let created_by: UUID?
+            struct CreateHouseholdParams: Encodable {
+                let p_name: String
             }
 
-            let userId = client.auth.currentUser?.id
-            let params = CreateParams(
-                name: name,
-                created_by: userId
-            )
-
             let created: Household = try await client
-                .from("households")
-                .insert(params)
-                .select()
-                .single()
+                .rpc(
+                    "create_household",
+                    params: CreateHouseholdParams(
+                        p_name: name
+                    )
+                )
                 .execute()
                 .value
 
@@ -113,7 +97,10 @@ final class HouseholdManager: ObservableObject {
             return true
 
         } catch {
+            print("Failed to create household:", error)
+
             errorMessage = "Failed to create household."
+
             isLoading = false
             return false
         }
@@ -146,10 +133,40 @@ final class HouseholdManager: ObservableObject {
             return true
 
         } catch {
+            print("Failed to join household:", error)
+
             errorMessage = "Invalid join code or failed to join."
+
             isLoading = false
             return false
         }
+    }
+
+    // MARK: - Devices
+
+    func fetchPairedDevices() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            pairedDevices = try await client
+                .from("device_claims")
+                .select("device_id")
+                .not(
+                    "assigned_user_id",
+                    operator: .is,
+                    value: "null"
+                )
+                .execute()
+                .value
+
+        } catch {
+            print("Failed to load paired devices:", error)
+
+            errorMessage = "Failed to load paired devices."
+        }
+
+        isLoading = false
     }
 
     // MARK: - Pair Device
@@ -160,6 +177,7 @@ final class HouseholdManager: ObservableObject {
 
         guard let userId = client.auth.currentUser?.id else {
             errorMessage = "Not authenticated."
+
             isLoading = false
             return false
         }
@@ -180,7 +198,9 @@ final class HouseholdManager: ObservableObject {
                     "claim_code",
                     value: claimCode
                         .uppercased()
-                        .trimmingCharacters(in: .whitespaces)
+                        .trimmingCharacters(
+                            in: .whitespaces
+                        )
                 )
                 .execute()
 
@@ -188,7 +208,11 @@ final class HouseholdManager: ObservableObject {
             return true
 
         } catch {
-            errorMessage = "Failed to pair device. Code may be expired or invalid."
+            print("Failed to pair device:", error)
+
+            errorMessage =
+                "Failed to pair device. Code may be expired or invalid."
+
             isLoading = false
             return false
         }
