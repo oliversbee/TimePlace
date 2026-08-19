@@ -2,7 +2,10 @@ import SwiftUI
 
 struct CameraCaptureView: View {
     @ObservedObject var camera: CameraManager
+    var onOpenMenu: () -> Void
     var onCaptured: () -> Void
+
+    @State private var isFlashOn = false
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -11,7 +14,6 @@ struct CameraCaptureView: View {
                 .ignoresSafeArea()
 
             // Secondary feed, small, bottom-right corner — only shown in "Both" mode.
-            // Tap it to swap which camera is "main".
             if camera.captureMode == .both {
                 CameraPreview(layer: camera.mainIsBack ? camera.frontPreviewLayer : camera.backPreviewLayer)
                     .frame(width: 120, height: 160)
@@ -24,35 +26,50 @@ struct CameraCaptureView: View {
             }
 
             VStack {
-                HStack {
-                    Picker("Mode", selection: $camera.captureMode) {
-                        ForEach(CaptureMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
-                    .background(.black.opacity(0.35))
-                    .cornerRadius(8)
-
-                    Spacer()
-
-                    // Flips which camera is active/main. Doubles as the only way
-                    // to switch cameras in "One" mode, since there's no corner
-                    // preview to tap there.
+                // Top Overlay Controls Header
+                HStack(alignment: .center) {
+                    // Top Left: Hamburger Menu Button
                     Button {
-                        camera.swapMain()
+                        onOpenMenu()
                     } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath.camera")
+                        Image(systemName: "line.3.horizontal")
                             .font(.title2)
                             .foregroundColor(.white)
                             .padding(10)
                             .background(.black.opacity(0.4))
                             .clipShape(Circle())
                     }
+
+                    Spacer()
+
+                    // Top Right Controls: Mode Selector + Flash Toggle
+                    HStack(spacing: 12) {
+                        Picker("Mode", selection: $camera.captureMode) {
+                            ForEach(CaptureMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 130)
+                        .background(.black.opacity(0.35))
+                        .cornerRadius(8)
+
+                        // Flash Toggle Button
+                        Button {
+                            isFlashOn.toggle()
+                            // Set flash mode on CameraManager instance
+                        } label: {
+                            Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
+                                .font(.title3)
+                                .foregroundColor(isFlashOn ? .yellow : .white)
+                                .padding(10)
+                                .background(.black.opacity(0.4))
+                                .clipShape(Circle())
+                        }
+                    }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.top, 50)
 
                 if let error = camera.errorMessage {
                     Text(error)
@@ -66,8 +83,11 @@ struct CameraCaptureView: View {
 
                 Spacer()
 
+                // Bottom Capture Controls
                 HStack {
                     Spacer()
+
+                    // Shutter Capture Button
                     Button {
                         camera.capturePhoto(completion: onCaptured)
                     } label: {
@@ -76,6 +96,7 @@ struct CameraCaptureView: View {
                             .frame(width: 76, height: 76)
                             .overlay(Circle().fill(.white).frame(width: 64, height: 64))
                     }
+
                     Spacer()
                 }
                 .padding(.bottom, 40)
