@@ -16,27 +16,32 @@ struct HouseholdMembersView: View {
     @State private var showingLeaveConfirmation = false
     @State private var showingRenameSheet = false
 
+    // MARK: - Visible Members
+
     var visibleMembers: [HouseholdMember] {
 
-    guard let currentUserId = manager.currentUserId else {
-        return []
+        guard let currentUserId = manager.currentUserId else {
+            return []
+        }
+
+        return members.filter { member in
+            member.userId != currentUserId &&
+            !hiddenUsers.contains(member.userId)
+        }
     }
 
-    return members.filter { member in
-        member.userId != currentUserId &&
-        !hiddenUsers.contains(member.userId)
-    }
-}
+    // MARK: - Body
 
     var body: some View {
 
         Form {
 
-            // MARK: - Household
+            // MARK: Household
 
             Section {
 
                 HStack {
+
                     Text("Join Code")
 
                     Spacer()
@@ -52,8 +57,7 @@ struct HouseholdMembersView: View {
                 }
             }
 
-
-            // MARK: - Members
+            // MARK: Members
 
             Section("Members") {
 
@@ -85,30 +89,42 @@ struct HouseholdMembersView: View {
 
                             HStack {
 
-                                Text(displayName(for: member))
-                                    .foregroundColor(.primary)
+                                Text(
+                                    displayName(
+                                        for: member
+                                    )
+                                )
+                                .foregroundColor(.primary)
 
                                 Spacer()
 
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                Image(
+                                    systemName: "chevron.right"
+                                )
+                                .font(.caption)
+                                .foregroundColor(.gray)
                             }
                         }
                     }
                 }
             }
 
-
-            // MARK: - Hidden Members
+            // MARK: Hidden Members
 
             if !hiddenUsers.isEmpty {
 
                 Section("Hidden Members") {
 
                     ForEach(
-                        members.filter {
-                            hiddenUsers.contains($0.userId)
+                        members.filter { member in
+
+                            guard let currentUserId =
+                                    manager.currentUserId else {
+                                return false
+                            }
+
+                            return member.userId != currentUserId &&
+                                   hiddenUsers.contains(member.userId)
                         }
                     ) { member in
 
@@ -122,8 +138,12 @@ struct HouseholdMembersView: View {
 
                             HStack {
 
-                                Text(displayName(for: member))
-                                    .foregroundColor(.primary)
+                                Text(
+                                    displayName(
+                                        for: member
+                                    )
+                                )
+                                .foregroundColor(.primary)
 
                                 Spacer()
 
@@ -135,8 +155,7 @@ struct HouseholdMembersView: View {
                 }
             }
 
-
-            // MARK: - Leave
+            // MARK: Leave
 
             Section {
 
@@ -152,11 +171,13 @@ struct HouseholdMembersView: View {
         .navigationTitle(household.name)
         .navigationBarTitleDisplayMode(.inline)
 
+        // MARK: Load
+
         .task {
             await loadMembers()
         }
 
-        // MARK: - Member Options
+        // MARK: Member Options
 
         .confirmationDialog(
             memberOptionsTitle,
@@ -164,18 +185,18 @@ struct HouseholdMembersView: View {
             titleVisibility: .visible
         ) {
 
-            if let selectedMember {
+            if let member = selectedMember {
 
                 Button("Change Name") {
                     showingRenameSheet = true
                 }
 
-                if hiddenUsers.contains(selectedMember.userId) {
+                if hiddenUsers.contains(member.userId) {
 
                     Button("Show User") {
 
                         Task {
-                            await unhide(selectedMember)
+                            await unhide(member)
                         }
                     }
 
@@ -187,16 +208,19 @@ struct HouseholdMembersView: View {
                     ) {
 
                         Task {
-                            await hide(selectedMember)
+                            await hide(member)
                         }
                     }
                 }
 
-                Button("Cancel", role: .cancel) {}
+                Button(
+                    "Cancel",
+                    role: .cancel
+                ) {}
             }
         }
 
-        // MARK: - Leave Confirmation
+        // MARK: Leave Confirmation
 
         .alert(
             "Leave Household?",
@@ -225,36 +249,40 @@ struct HouseholdMembersView: View {
             )
         }
 
-        // MARK: - Rename Sheet
+        // MARK: Rename Sheet
 
         .sheet(
             isPresented: $showingRenameSheet
         ) {
 
-            if let selectedMember {
+            if let member = selectedMember {
 
                 RenameMemberView(
                     currentName: displayName(
-                        for: selectedMember
+                        for: member
                     )
                 ) { newName in
 
                     Task {
 
-                        let success = await manager.setNickname(
-                            targetUserId: selectedMember.userId,
-                            nickname: newName
-                        )
+                        let success =
+                            await manager.setNickname(
+                                targetUserId: member.userId,
+                                nickname: newName
+                            )
 
                         if success {
 
                             if newName.isEmpty {
+
                                 nicknames[
-                                    selectedMember.userId
+                                    member.userId
                                 ] = nil
+
                             } else {
+
                                 nicknames[
-                                    selectedMember.userId
+                                    member.userId
                                 ] = newName
                             }
                         }
@@ -264,18 +292,18 @@ struct HouseholdMembersView: View {
         }
     }
 
-
     // MARK: - Member Options Title
 
     private var memberOptionsTitle: String {
 
-        guard let selectedMember else {
+        guard let member = selectedMember else {
             return "Member"
         }
 
-        return displayName(for: selectedMember)
+        return displayName(
+            for: member
+        )
     }
-
 
     // MARK: - Display Name
 
@@ -283,7 +311,8 @@ struct HouseholdMembersView: View {
         for member: HouseholdMember
     ) -> String {
 
-        if let nickname = nicknames[member.userId],
+        if let nickname =
+            nicknames[member.userId],
            !nickname.isEmpty {
 
             return nickname
@@ -292,24 +321,29 @@ struct HouseholdMembersView: View {
         return member.name ?? "Unnamed User"
     }
 
-
     // MARK: - Load Members
 
     private func loadMembers() async {
 
         isLoadingMembers = true
 
-        members = await manager.fetchHouseholdMembers(
-            householdId: household.id
-        )
+        let loadedMembers =
+            await manager.fetchHouseholdMembers(
+                householdId: household.id
+            )
 
-        nicknames = await manager.fetchNicknames()
+        let loadedNicknames =
+            await manager.fetchNicknames()
 
-        hiddenUsers = await manager.fetchHiddenUsers()
+        let loadedHiddenUsers =
+            await manager.fetchHiddenUsers()
+
+        members = loadedMembers
+        nicknames = loadedNicknames
+        hiddenUsers = loadedHiddenUsers
 
         isLoadingMembers = false
     }
-
 
     // MARK: - Hide
 
@@ -317,15 +351,17 @@ struct HouseholdMembersView: View {
         _ member: HouseholdMember
     ) async {
 
-        let success = await manager.hideUser(
-            targetUserId: member.userId
-        )
+        let success =
+            await manager.hideUser(
+                targetUserId: member.userId
+            )
 
         if success {
-            hiddenUsers.insert(member.userId)
+            hiddenUsers.insert(
+                member.userId
+            )
         }
     }
-
 
     // MARK: - Unhide
 
@@ -333,15 +369,17 @@ struct HouseholdMembersView: View {
         _ member: HouseholdMember
     ) async {
 
-        let success = await manager.unhideUser(
-            targetUserId: member.userId
-        )
+        let success =
+            await manager.unhideUser(
+                targetUserId: member.userId
+            )
 
         if success {
-            hiddenUsers.remove(member.userId)
+            hiddenUsers.remove(
+                member.userId
+            )
         }
     }
-
 
     // MARK: - Leave
 
