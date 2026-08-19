@@ -117,6 +117,64 @@ final class HouseholdManager: ObservableObject {
         isLoading = false
     }
 
+// MARK: - Household Members
+
+func fetchHouseholdMembers(
+    householdId: UUID
+) async -> [HouseholdMember] {
+
+    do {
+
+        struct MemberRow: Decodable {
+            let userId: UUID
+            let user: UserProfile?
+
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case user = "users"
+            }
+        }
+
+        struct UserProfile: Decodable {
+            let id: UUID
+            let name: String?
+        }
+
+        let rows: [MemberRow] = try await client
+            .from("household_members")
+            .select(
+                """
+                user_id,
+                users (
+                    id,
+                    name
+                )
+                """
+            )
+            .eq(
+                "household_id",
+                value: householdId
+            )
+            .execute()
+            .value
+
+        return rows.map { row in
+            HouseholdMember(
+                userId: row.userId,
+                name: row.user?.name
+            )
+        }
+
+    } catch {
+
+        print(
+            "Failed to load household members:",
+            error
+        )
+
+        return []
+    }
+}
 
     // MARK: - Create Household
 
