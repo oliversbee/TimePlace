@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HouseholdsSettingsView: View {
+
     @StateObject private var manager = HouseholdManager()
 
     @State private var newHouseholdName = ""
@@ -9,62 +10,137 @@ struct HouseholdsSettingsView: View {
     @State private var showJoinSection = false
 
     var body: some View {
+
         Form {
+
             if let error = manager.errorMessage {
+
                 Section {
-                    Text(error).foregroundColor(.red)
+                    Text(error)
+                        .foregroundColor(.red)
                 }
             }
 
+
+            // MARK: - Joined Households
+
             Section("Joined Households") {
+
                 if manager.households.isEmpty && !manager.isLoading {
-                    Text("No households joined yet.").foregroundColor(.gray)
+
+                    Text("No households joined yet.")
+                        .foregroundColor(.gray)
+
                 } else {
+
                     ForEach(manager.households) { h in
-                        HStack {
-                            Text(h.name).fontWeight(.semibold)
-                            Spacer()
-                            Text(h.joinCode)
-                                .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.gray)
+
+                        NavigationLink {
+                            HouseholdMembersView(
+                                household: h,
+                                manager: manager
+                            )
+                        } label: {
+
+                            HStack {
+
+                                Text(h.name)
+                                    .fontWeight(.semibold)
+
+                                Spacer()
+
+                                Text(h.joinCode)
+                                    .font(
+                                        .system(
+                                            .body,
+                                            design: .monospaced
+                                        )
+                                    )
+                                    .foregroundColor(.gray)
+                            }
                         }
                     }
                 }
             }
 
+
+            // MARK: - Actions
+
             Section("Actions") {
-                Button("Join a Household") { showJoinSection.toggle() }
-                Button("Create New Household") { showCreateSection.toggle() }
+
+                Button("Join a Household") {
+                    showJoinSection.toggle()
+                }
+
+                Button("Create New Household") {
+                    showCreateSection.toggle()
+                }
             }
 
+
+            // MARK: - Join Household
+
             if showJoinSection {
+
                 Section("Enter Join Code") {
-                    TextField("6-character code", text: $joinCode)
-                        .textInputAutocapitalization(.characters)
+
+                    TextField(
+                        "6-character code",
+                        text: $joinCode
+                    )
+                    .textInputAutocapitalization(
+                        .characters
+                    )
+
                     Button("Submit Code") {
+
                         Task {
-                            if await manager.joinHousehold(code: joinCode) {
+
+                            if await manager.joinHousehold(
+                                code: joinCode
+                            ) {
+
                                 joinCode = ""
                                 showJoinSection = false
                             }
                         }
                     }
-                    .disabled(joinCode.count < 6 || manager.isLoading)
+                    .disabled(
+                        joinCode.count < 6 ||
+                        manager.isLoading
+                    )
                 }
             }
 
+
+            // MARK: - Create Household
+
             if showCreateSection {
+
                 Section("Create Household") {
-                    TextField("Household Name", text: $newHouseholdName)
+
+                    TextField(
+                        "Household Name",
+                        text: $newHouseholdName
+                    )
+
                     Button("Create") {
+
                         Task {
-                            if await manager.createHousehold(name: newHouseholdName) {
+
+                            if await manager.createHousehold(
+                                name: newHouseholdName
+                            ) {
+
                                 newHouseholdName = ""
                                 showCreateSection = false
                             }
                         }
                     }
-                    .disabled(newHouseholdName.isEmpty || manager.isLoading)
+                    .disabled(
+                        newHouseholdName.isEmpty ||
+                        manager.isLoading
+                    )
                 }
             }
         }
