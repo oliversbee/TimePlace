@@ -46,7 +46,7 @@ struct SideMenuView: View {
                             .fill(Color.clear)
                     )
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
                 .padding(.horizontal, 16)
 
                 Spacer()
