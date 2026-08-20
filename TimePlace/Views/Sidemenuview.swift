@@ -5,23 +5,25 @@ struct SideMenuView: View {
     var onOpenSettings: () -> Void
     var onSignOut: () -> Void
 
+    @Environment(\.colorScheme) var colorScheme
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Liquid Glass Translucent Background
+            // Liquid Glass Translucent Menu Background
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea(.all)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 // Menu Header Section
                 Text("Menu")
                     .font(.title2.weight(.bold))
                     .foregroundColor(.primary)
                     .padding(.horizontal, 20)
                     .padding(.top, 60)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 8)
 
-                // Settings Item
+                // Liquid Glass Settings Button
                 Button {
                     onOpenSettings()
                 } label: {
@@ -42,15 +44,26 @@ struct SideMenuView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.regularMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(
+                                        colorScheme == .dark ? .white.opacity(0.2) : .white.opacity(0.6),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                    )
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 16)
 
                 Spacer()
 
-                // Sign Out Action Button
+                // Liquid Glass Sign Out Button
                 Button(role: .destructive) {
                     onSignOut()
                 } label: {
@@ -63,7 +76,22 @@ struct SideMenuView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.regularMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.red.opacity(0.12))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(
+                                        colorScheme == .dark ? Color.red.opacity(0.3) : Color.red.opacity(0.2),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .shadow(color: Color.red.opacity(0.08), radius: 8, x: 0, y: 4)
+                    )
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.red)
