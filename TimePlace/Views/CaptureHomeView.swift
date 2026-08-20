@@ -26,13 +26,15 @@ struct CaptureHomeView: View {
                 )
                 .frame(width: menuWidth)
                 .frame(maxHeight: .infinity)
+                .clipped() // Prevents the menu background from leaking out at the edges
 
                 cameraContent
                     .frame(width: geo.size.width, height: geo.size.height)
                     .overlay(closeOverlay)
                     .offset(x: menuIsOpen ? menuWidth : 0)
-                    .shadow(color: .black.opacity(menuIsOpen ? 0.4 : 0), radius: 16, x: -4)
+                    .shadow(color: menuIsOpen ? .black.opacity(0.3) : .clear, radius: 10, x: -2)
             }
+            .background(Color.black) // Ensures any corners behind the camera view stay black
             .ignoresSafeArea()
             .sheet(isPresented: $showSettings) {
                 SettingsView()
