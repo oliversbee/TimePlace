@@ -9,13 +9,13 @@ struct SideMenuView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Liquid Glass Translucent Menu Background
+            // Menu Background
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea(.all)
 
             VStack(alignment: .leading, spacing: 12) {
-                // Menu Header Section
+                // Menu Header
                 Text("Menu")
                     .font(.title2.weight(.bold))
                     .foregroundColor(.primary)
@@ -23,18 +23,18 @@ struct SideMenuView: View {
                     .padding(.top, 60)
                     .padding(.bottom, 8)
 
-                // Liquid Glass Settings Button
+                // Settings Button
                 Button {
                     onOpenSettings()
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.body.weight(.medium))
-                            .foregroundColor(.accentColor)
+                        Image(systemName: "gearshape")
+                            .font(.body)
+                            .foregroundColor(.primary)
                             .frame(width: 24)
 
                         Text("Settings")
-                            .font(.body.weight(.medium))
+                            .font(.body)
                             .foregroundColor(.primary)
 
                         Spacer()
@@ -44,18 +44,11 @@ struct SideMenuView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.regularMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(
-                                        colorScheme == .dark ? .white.opacity(0.2) : .white.opacity(0.6),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.clear)
                     )
                 }
                 .buttonStyle(.plain)
@@ -63,35 +56,22 @@ struct SideMenuView: View {
 
                 Spacer()
 
-                // Liquid Glass Sign Out Button
+                // Sign Out Button
                 Button(role: .destructive) {
                     onSignOut()
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .font(.body.weight(.semibold))
+                            .font(.body)
 
                         Text("Sign Out")
-                            .font(.body.weight(.semibold))
+                            .font(.body)
+
+                        Spacer()
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.regularMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.red.opacity(0.12))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(
-                                        colorScheme == .dark ? Color.red.opacity(0.3) : Color.red.opacity(0.2),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .shadow(color: Color.red.opacity(0.08), radius: 8, x: 0, y: 4)
-                    )
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.red)
@@ -101,5 +81,6 @@ struct SideMenuView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .ignoresSafeArea(.all)
+        .preferredColorScheme(.dark)
     }
 }
