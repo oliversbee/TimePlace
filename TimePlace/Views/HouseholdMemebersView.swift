@@ -11,10 +11,7 @@ struct HouseholdMembersView: View {
     @State private var hiddenUsers: Set<UUID> = []
 
     @State private var isLoadingMembers = false
-    @State private var selectedMember: HouseholdMember?
-    @State private var showingMemberOptions = false
     @State private var showingLeaveConfirmation = false
-    @State private var showingRenameSheet = false
 
     // MARK: - Filtered Household Members (Excludes Current User)
 
@@ -77,40 +74,48 @@ struct HouseholdMembersView: View {
                     ForEach(otherMembers) { member in
 
                         HStack {
-                            Button {
-                                selectedMember = member
-                                showingMemberOptions = true
-                            } label: {
-                                HStack {
-                                    Text(
-                                        displayName(
-                                            for: member
+                            // Inline Name TextField
+                            TextField(
+                                "Name",
+                                text: Binding(
+                                    get: {
+                                        displayName(for: member)
+                                    },
+                                    set: { newName in
+                                        nicknames[member.userId] = newName
+                                    }
+                                ),
+                                onCommit: {
+                                    let currentName = nicknames[member.userId] ?? ""
+                                    Task {
+                                        let success = await manager.setNickname(
+                                            targetUserId: member.userId,
+                                            nickname: currentName
                                         )
-                                    )
-                                    .foregroundColor(.primary)
-
-                                    Image(
-                                        systemName: "pencil"
-                                    )
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                        if !success {
+                                            // Revert or reload on failure
+                                            await loadMembers()
+                                        }
+                                    }
                                 }
-                            }
+                            )
+                            .foregroundColor(.primary)
 
                             Spacer()
 
+                            // Toggle: ON = Visible, OFF = Hidden
                             Toggle(
-                                "Hide",
+                                "Visible",
                                 isOn: Binding(
                                     get: {
-                                        hiddenUsers.contains(member.userId)
+                                        !hiddenUsers.contains(member.userId)
                                     },
-                                    set: { isHidden in
+                                    set: { isVisible in
                                         Task {
-                                            if isHidden {
-                                                await hide(member)
-                                            } else {
+                                            if isVisible {
                                                 await unhide(member)
+                                            } else {
+                                                await hide(member)
                                             }
                                         }
                                     }
@@ -144,27 +149,6 @@ struct HouseholdMembersView: View {
             await loadMembers()
         }
 
-        // MARK: Member Options
-
-        .confirmationDialog(
-            memberOptionsTitle,
-            isPresented: $showingMemberOptions,
-            titleVisibility: .visible
-        ) {
-
-            if selectedMember != nil {
-
-                Button("Change Name") {
-                    showingRenameSheet = true
-                }
-
-                Button(
-                    "Cancel",
-                    role: .cancel
-                ) {}
-            }
-        }
-
         // MARK: Leave Confirmation
 
         .alert(
@@ -193,61 +177,6 @@ struct HouseholdMembersView: View {
                 "You will be removed from \(household.name)."
             )
         }
-
-        // MARK: Rename Sheet
-
-        .sheet(
-            isPresented: $showingRenameSheet
-        ) {
-
-            if let member = selectedMember {
-
-                RenameMemberView(
-                    currentName: displayName(
-                        for: member
-                    )
-                ) { newName in
-
-                    Task {
-
-                        let success =
-                            await manager.setNickname(
-                                targetUserId: member.userId,
-                                nickname: newName
-                            )
-
-                        if success {
-
-                            if newName.isEmpty {
-
-                                nicknames[
-                                    member.userId
-                                ] = nil
-
-                            } else {
-
-                                nicknames[
-                                    member.userId
-                                ] = newName
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Member Options Title
-
-    private var memberOptionsTitle: String {
-
-        guard let member = selectedMember else {
-            return "Member"
-        }
-
-        return displayName(
-            for: member
-        )
     }
 
     // MARK: - Display Name
@@ -256,10 +185,8 @@ struct HouseholdMembersView: View {
         for member: HouseholdMember
     ) -> String {
 
-        if let nickname =
-            nicknames[member.userId],
+        if let nickname = nicknames[member.userId],
            !nickname.isEmpty {
-
             return nickname
         }
 
