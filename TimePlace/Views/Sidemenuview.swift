@@ -17,13 +17,10 @@ struct SideMenuView: View {
                     Text("Settings")
                         .fontWeight(.semibold)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 10)
             }
-            .buttonStyle(.bordered)
-            .tint(.blue)
+            .foregroundColor(.primary)
             .padding(.horizontal, 24)
-            .padding(.bottom, 40)
 
             Spacer()
 
@@ -44,6 +41,9 @@ struct SideMenuView: View {
             .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(
+            Color.white
+                .ignoresSafeArea() // Flushes the white background to the physical screen edges
+        )
     }
 }
