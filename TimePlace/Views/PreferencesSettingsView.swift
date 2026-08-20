@@ -16,10 +16,31 @@ struct PreferencesSettingsView: View {
 
             Section("Display Settings") {
                 TextField("Display Name", text: $viewModel.displayName)
-                
-                Toggle("Show My Own Photos", isOn: $viewModel.showOwnImage)
+                    .onSubmit {
+                        saveChanges()
+                    }
 
-                Picker("Image Swap Interval", selection: $viewModel.imageIntervalSeconds) {
+                Toggle(
+                    "Show My Own Photos",
+                    isOn: Binding(
+                        get: { viewModel.showOwnImage },
+                        set: { newValue in
+                            viewModel.showOwnImage = newValue
+                            saveChanges()
+                        }
+                    )
+                )
+
+                Picker(
+                    "Image Swap Interval",
+                    selection: Binding(
+                        get: { viewModel.imageIntervalSeconds },
+                        set: { newValue in
+                            viewModel.imageIntervalSeconds = newValue
+                            saveChanges()
+                        }
+                    )
+                ) {
                     ForEach(intervalOptions, id: \.self) { seconds in
                         Text(intervalString(for: seconds)).tag(seconds)
                     }
@@ -27,21 +48,17 @@ struct PreferencesSettingsView: View {
             }
         }
         .navigationTitle("Preferences")
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    if let userId = auth.userId {
-                        Task {
-                            await viewModel.savePreferences(currentUserId: userId)
-                        }
-                    }
-                }
-                .disabled(viewModel.isSaving)
-            }
-        }
         .task {
             if let userId = auth.userId {
                 await viewModel.loadData(currentUserId: userId)
+            }
+        }
+    }
+
+    private func saveChanges() {
+        if let userId = auth.userId {
+            Task {
+                await viewModel.savePreferences(currentUserId: userId)
             }
         }
     }

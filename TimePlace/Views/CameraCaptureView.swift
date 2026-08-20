@@ -120,6 +120,7 @@ struct CameraCaptureView: View {
             }
         }
         .background(Color.black)
+        .ignoresSafeArea() // Prevents safe area recalculation from revealing a white bar at the bottom
         .onAppear {
             camera.configure()
             camera.start()

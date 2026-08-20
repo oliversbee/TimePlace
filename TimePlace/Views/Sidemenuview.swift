@@ -19,7 +19,7 @@ struct SideMenuView: View {
                 }
                 .padding(.vertical, 10)
             }
-            .foregroundColor(.white)
+            .foregroundColor(.primary)
             .padding(.horizontal, 24)
 
             Spacer()
@@ -36,12 +36,11 @@ struct SideMenuView: View {
                 .padding(.vertical, 14)
             }
             .buttonStyle(.bordered)
-            .tint(.white)
-            .foregroundColor(.white)
+            .tint(.red)
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.black)
+        .background(Color.white)
     }
 }
