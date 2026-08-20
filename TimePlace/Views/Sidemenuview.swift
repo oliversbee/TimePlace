@@ -37,11 +37,6 @@ struct SideMenuView: View {
                             .font(.body)
                             .foregroundColor(.primary)
 
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -51,7 +46,7 @@ struct SideMenuView: View {
                             .fill(Color.clear)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
                 .padding(.horizontal, 16)
 
                 Spacer()
