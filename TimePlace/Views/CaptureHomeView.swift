@@ -14,27 +14,35 @@ struct CaptureHomeView: View {
             let menuWidth = geo.size.width * menuWidthFraction
 
             ZStack(alignment: .leading) {
-                SideMenuView(
-                    onOpenSettings: {
-                        setMenuOpen(false)
-                        showSettings = true
-                    },
-                    onSignOut: {
-                        setMenuOpen(false)
-                        Task { await auth.signOut() }
-                    }
-                )
-                .frame(width: menuWidth)
-                .frame(maxHeight: .infinity)
-                .clipped() // Prevents the menu background from leaking out at the edges
+                // Base background for entire screen behind everything
+                Color.black
+                    .ignoresSafeArea()
 
+                // Side Menu Container bounded tightly to its width
+                HStack(spacing: 0) {
+                    SideMenuView(
+                        onOpenSettings: {
+                            setMenuOpen(false)
+                            showSettings = true
+                        },
+                        onSignOut: {
+                            setMenuOpen(false)
+                            Task { await auth.signOut() }
+                        }
+                    )
+                    .frame(width: menuWidth)
+                    
+                    Spacer(minLength: 0)
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
+
+                // Camera View
                 cameraContent
                     .frame(width: geo.size.width, height: geo.size.height)
                     .overlay(closeOverlay)
                     .offset(x: menuIsOpen ? menuWidth : 0)
-                    .shadow(color: menuIsOpen ? .black.opacity(0.3) : .clear, radius: 10, x: -2)
+                    .shadow(color: menuIsOpen ? .black.opacity(0.4) : .clear, radius: 10, x: -4)
             }
-            .background(Color.black) // Ensures any corners behind the camera view stay black
             .ignoresSafeArea()
             .sheet(isPresented: $showSettings) {
                 SettingsView()
