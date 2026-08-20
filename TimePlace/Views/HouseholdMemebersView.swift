@@ -16,19 +16,17 @@ struct HouseholdMembersView: View {
     @State private var showingLeaveConfirmation = false
     @State private var showingRenameSheet = false
 
-    // MARK: - Visible Members
+    // MARK: - Filtered Household Members (Excludes Current User)
 
-    var visibleMembers: [HouseholdMember] {
+    var otherMembers: [HouseholdMember] {
+        guard let currentUserId = manager.currentUserId else {
+            return []
+        }
 
-    guard let currentUserId = manager.currentUserId else {
-        return []
+        return members.filter { member in
+            member.userId != currentUserId
+        }
     }
-
-    return members.filter { member in
-        member.userId != currentUserId &&
-        !hiddenUsers.contains(member.userId)
-    }
-}
 
     var body: some View {
 
@@ -69,85 +67,56 @@ struct HouseholdMembersView: View {
                         Spacer()
                     }
 
-                } else if visibleMembers.isEmpty {
+                } else if otherMembers.isEmpty {
 
                     Text("No members to display.")
                         .foregroundColor(.gray)
 
                 } else {
 
-                    ForEach(visibleMembers) { member in
+                    ForEach(otherMembers) { member in
 
-                        Button {
-
-                            selectedMember = member
-                            showingMemberOptions = true
-
-                        } label: {
-
-                            HStack {
-
-                                Text(
-                                    displayName(
-                                        for: member
+                        HStack {
+                            Button {
+                                selectedMember = member
+                                showingMemberOptions = true
+                            } label: {
+                                HStack {
+                                    Text(
+                                        displayName(
+                                            for: member
+                                        )
                                     )
-                                )
-                                .foregroundColor(.primary)
+                                    .foregroundColor(.primary)
 
-                                Spacer()
-
-                                Image(
-                                    systemName: "chevron.right"
-                                )
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // MARK: Hidden Members
-
-            if !hiddenUsers.isEmpty {
-
-                Section("Hidden Members") {
-
-                    ForEach(
-                        members.filter { member in
-
-                            guard let currentUserId =
-                                    manager.currentUserId else {
-                                return false
-                            }
-
-                            return member.userId != currentUserId &&
-                                   hiddenUsers.contains(member.userId)
-                        }
-                    ) { member in
-
-                        Button {
-
-                            Task {
-                                await unhide(member)
-                            }
-
-                        } label: {
-
-                            HStack {
-
-                                Text(
-                                    displayName(
-                                        for: member
+                                    Image(
+                                        systemName: "pencil"
                                     )
-                                )
-                                .foregroundColor(.primary)
-
-                                Spacer()
-
-                                Text("Show")
-                                    .foregroundColor(.blue)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                }
                             }
+
+                            Spacer()
+
+                            Toggle(
+                                "Hide",
+                                isOn: Binding(
+                                    get: {
+                                        hiddenUsers.contains(member.userId)
+                                    },
+                                    set: { isHidden in
+                                        Task {
+                                            if isHidden {
+                                                await hide(member)
+                                            } else {
+                                                await unhide(member)
+                                            }
+                                        }
+                                    }
+                                )
+                            )
+                            .labelsHidden()
                         }
                     }
                 }
@@ -183,32 +152,10 @@ struct HouseholdMembersView: View {
             titleVisibility: .visible
         ) {
 
-            if let member = selectedMember {
+            if selectedMember != nil {
 
                 Button("Change Name") {
                     showingRenameSheet = true
-                }
-
-                if hiddenUsers.contains(member.userId) {
-
-                    Button("Show User") {
-
-                        Task {
-                            await unhide(member)
-                        }
-                    }
-
-                } else {
-
-                    Button(
-                        "Hide from View",
-                        role: .destructive
-                    ) {
-
-                        Task {
-                            await hide(member)
-                        }
-                    }
                 }
 
                 Button(

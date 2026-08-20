@@ -42,7 +42,7 @@ struct CameraCaptureView: View {
 
                     Spacer()
 
-                    // Top Right Controls: Mode Selector + Flash Toggle
+                    // Top Right Controls: Mode Selector + Camera Flip Toggle
                     HStack(spacing: 12) {
                         Picker("Mode", selection: $camera.captureMode) {
                             ForEach(CaptureMode.allCases) { mode in
@@ -54,14 +54,13 @@ struct CameraCaptureView: View {
                         .background(.black.opacity(0.35))
                         .cornerRadius(8)
 
-                        // Flash Toggle Button
+                        // Camera Flip Button
                         Button {
-                            isFlashOn.toggle()
-                            // Set flash mode on CameraManager instance
+                            camera.swapMain()
                         } label: {
-                            Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
+                            Image(systemName: "arrow.triangle.2.circlepath.camera")
                                 .font(.title3)
-                                .foregroundColor(isFlashOn ? .yellow : .white)
+                                .foregroundColor(.white)
                                 .padding(10)
                                 .background(.black.opacity(0.4))
                                 .clipShape(Circle())
@@ -85,6 +84,10 @@ struct CameraCaptureView: View {
 
                 // Bottom Capture Controls
                 HStack {
+                    // Spacer to balance the right-side flash button
+                    Spacer()
+                        .frame(width: 44)
+
                     Spacer()
 
                     // Shutter Capture Button
@@ -98,7 +101,21 @@ struct CameraCaptureView: View {
                     }
 
                     Spacer()
+
+                    // Bottom Right: Flash Toggle Button
+                    Button {
+                        isFlashOn.toggle()
+                        // Set flash mode on CameraManager instance
+                    } label: {
+                        Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
+                            .font(.title3)
+                            .foregroundColor(isFlashOn ? .yellow : .white)
+                            .padding(10)
+                            .background(.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
                 }
+                .padding(.horizontal, 20)
                 .padding(.bottom, 40)
             }
         }
