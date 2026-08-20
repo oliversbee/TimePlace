@@ -17,10 +17,13 @@ struct SideMenuView: View {
                     Text("Settings")
                         .fontWeight(.semibold)
                 }
-                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
             }
-            .foregroundColor(.primary)
+            .buttonStyle(.bordered)
+            .tint(.red)
             .padding(.horizontal, 24)
+            .padding(.bottom, 40)
 
             Spacer()
 
