@@ -5,12 +5,12 @@ import Foundation
 /// a "One" capture results in one.
 struct NewImage: Encodable {
     let userId: UUID
-    let imageUrl: String
+    let imagePath: String
     let takenAt: Date
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
-        case imageUrl = "image_url"
+        case imagePath = "image_path"
         case takenAt = "taken_at"
     }
 }
