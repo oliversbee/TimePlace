@@ -4,8 +4,11 @@ struct PostPreviewView: View {
     @EnvironmentObject var auth: AuthManager
 
     let mainImage: UIImage
-    /// nil when the user chose "One" camera at capture time.
+
+    /// nil when the user chose "One" camera mode.
+    /// non-nil when the user chose "Both".
     let secondaryImage: UIImage?
+
     var onRetake: () -> Void
     var onUploaded: () -> Void
 
@@ -14,30 +17,57 @@ struct PostPreviewView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
+
+            // MARK: Main Image
+
             Image(uiImage: mainImage)
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
 
+            // MARK: Secondary Image Preview
+
             if let secondaryImage {
+
                 Image(uiImage: secondaryImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 120, height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white, lineWidth: 3))
+                    .frame(
+                        width: 120,
+                        height: 160
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 16
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(
+                            cornerRadius: 16
+                        )
+                        .stroke(
+                            .white,
+                            lineWidth: 3
+                        )
+                    )
                     .padding(.trailing, 20)
                     .padding(.bottom, 140)
                     .shadow(radius: 6)
             }
 
+            // MARK: Controls
+
             VStack {
+
                 if let errorMessage {
+
                     Text(errorMessage)
                         .foregroundColor(.white)
                         .font(.footnote)
                         .padding()
-                        .background(.black.opacity(0.6))
+                        .background(
+                            .black.opacity(0.6)
+                        )
                         .cornerRadius(12)
                         .padding()
                 }
@@ -45,19 +75,30 @@ struct PostPreviewView: View {
                 Spacer()
 
                 HStack(spacing: 40) {
-                    Button("Retake", action: onRetake)
-                        .buttonStyle(.bordered)
-                        .tint(.white)
-                        .disabled(isUploading)
+
+                    Button(
+                        "Retake",
+                        action: onRetake
+                    )
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    .disabled(isUploading)
 
                     Button {
                         upload()
                     } label: {
+
                         Group {
+
                             if isUploading {
-                                ProgressView().tint(.white)
+
+                                ProgressView()
+                                    .tint(.white)
+
                             } else {
-                                Text("Upload").fontWeight(.semibold)
+
+                                Text("Upload")
+                                    .fontWeight(.semibold)
                             }
                         }
                         .frame(minWidth: 100)
@@ -71,26 +112,60 @@ struct PostPreviewView: View {
         .background(Color.black)
     }
 
+    // MARK: Upload
+
     private func upload() {
+
         guard let userId = auth.userId else {
             errorMessage = "You're not logged in."
             return
         }
+
         isUploading = true
         errorMessage = nil
 
         Task {
+
             do {
+
+                // SupabaseManager handles:
+                //
+                // One:
+                //     mainImage -> one image
+                //
+                // Both:
+                //     mainImage + secondaryImage
+                //     -> combined image
+                //     -> one image
+                //
+                // Nothing is downloaded here.
                 try await SupabaseManager.shared.uploadImages(
                     userId: userId,
                     mainImage: mainImage,
                     secondaryImage: secondaryImage
                 )
-                isUploading = false
-                onUploaded()
+
+                await MainActor.run {
+
+                    isUploading = false
+
+                    onUploaded()
+                }
+
             } catch {
-                errorMessage = "Upload failed. Check your connection and try again."
-                isUploading = false
+
+                print(
+                    "IMAGE UPLOAD ERROR:",
+                    error
+                )
+
+                await MainActor.run {
+
+                    isUploading = false
+
+                    errorMessage =
+                        "Upload failed: \(error.localizedDescription)"
+                }
             }
         }
     }
