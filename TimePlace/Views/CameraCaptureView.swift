@@ -37,8 +37,9 @@ struct CameraCaptureView: View {
                             .foregroundColor(.white)
                             .padding(10)
                             .background(.black.opacity(0.4))
-                            .clipShape(Circle())    
-
+                            .clipShape(Circle())
+                    }
+                    
                     Spacer()
 
                     // Top Right Controls: Mode Selector + Camera Flip Toggle
