@@ -28,17 +28,16 @@ struct CameraCaptureView: View {
             VStack {
                 // Top Overlay Controls Header
                 HStack(alignment: .center) {
-                    // Top Left: Hamburger Menu Button
+                    // Top Left: Settings Button
                     Button {
                         onOpenMenu()
                     } label: {
-                        Image(systemName: "line.3.horizontal")
+                        Image(systemName: "gearshape.fill")
                             .font(.title2)
                             .foregroundColor(.white)
                             .padding(10)
                             .background(.black.opacity(0.4))
-                            .clipShape(Circle())
-                    }
+                            .clipShape(Circle())    
 
                     Spacer()
 
