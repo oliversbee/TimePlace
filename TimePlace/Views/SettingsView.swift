@@ -4,6 +4,9 @@ struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
 
+    @StateObject private var settingsViewModel = SettingsViewModel()
+    @StateObject private var householdManager = HouseholdManager()
+
     var body: some View {
         NavigationStack {
             List {
@@ -13,6 +16,7 @@ struct SettingsView: View {
                     NavigationLink {
                         PreferencesSettingsView()
                             .environmentObject(auth)
+                            .environmentObject(settingsViewModel)
                     } label: {
                         Label(
                             "Preferences",
@@ -23,6 +27,7 @@ struct SettingsView: View {
                     NavigationLink {
                         HouseholdsSettingsView()
                             .environmentObject(auth)
+                            .environmentObject(householdManager)
                     } label: {
                         Label(
                             "Households",
@@ -33,6 +38,8 @@ struct SettingsView: View {
                     NavigationLink {
                         DevicesSettingsView()
                             .environmentObject(auth)
+                            .environmentObject(householdManager)
+                            .environmentObject(settingsViewModel)
                     } label: {
                         Label(
                             "Devices",
@@ -71,5 +78,28 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task {
+            await preloadSettings()
+        }
+    }
+
+    private func preloadSettings() async {
+        guard let userId = auth.userId else {
+            return
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await settingsViewModel.loadData(currentUserId: userId)
+            }
+
+            group.addTask {
+                await householdManager.fetchHouseholds()
+            }
+
+            group.addTask {
+                await householdManager.fetchPairedDevices()
+            }
+        }
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HouseholdsSettingsView: View {
 
-    @StateObject private var manager = HouseholdManager()
+    @EnvironmentObject var householdManager: HouseholdManager
 
     @State private var newHouseholdName = ""
     @State private var joinCode = ""
@@ -13,7 +13,7 @@ struct HouseholdsSettingsView: View {
 
         Form {
 
-            if let error = manager.errorMessage {
+            if let error = householdManager.errorMessage {
 
                 Section {
                     Text(error)
@@ -26,19 +26,19 @@ struct HouseholdsSettingsView: View {
 
             Section("Joined Households") {
 
-                if manager.households.isEmpty && !manager.isLoading {
+                if householdManager.households.isEmpty && !householdManager.isLoading {
 
                     Text("No households joined yet.")
                         .foregroundColor(.gray)
 
                 } else {
 
-                    ForEach(manager.households) { h in
+                    ForEach(householdManager.households) { h in
 
                         NavigationLink {
                             HouseholdMembersView(
                                 household: h,
-                                manager: manager
+                                manager: householdManager
                             )
                         } label: {
 
@@ -96,7 +96,7 @@ struct HouseholdsSettingsView: View {
 
                         Task {
 
-                            if await manager.joinHousehold(
+                            if await householdManager.joinHousehold(
                                 code: joinCode
                             ) {
 
@@ -107,7 +107,7 @@ struct HouseholdsSettingsView: View {
                     }
                     .disabled(
                         joinCode.count < 6 ||
-                        manager.isLoading
+                        householdManager.isLoading
                     )
                 }
             }
@@ -128,7 +128,7 @@ struct HouseholdsSettingsView: View {
 
                         Task {
 
-                            if await manager.createHousehold(
+                            if await householdManager.createHousehold(
                                 name: newHouseholdName
                             ) {
 
@@ -139,14 +139,11 @@ struct HouseholdsSettingsView: View {
                     }
                     .disabled(
                         newHouseholdName.isEmpty ||
-                        manager.isLoading
+                        householdManager.isLoading
                     )
                 }
             }
         }
         .navigationTitle("Households")
-        .task {
-            await manager.fetchHouseholds()
-        }
     }
 }
