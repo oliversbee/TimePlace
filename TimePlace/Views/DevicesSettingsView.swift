@@ -2,7 +2,9 @@ import SwiftUI
 
 struct DevicesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
-    @StateObject private var manager = HouseholdManager()
+    @EnvironmentObject var manager: HouseholdManager
+    @EnvironmentObject var settingsViewModel: SettingsViewModel
+
     @State private var deviceClaimCode = ""
     @State private var selectedDevice: PairedDevice?
 
@@ -23,11 +25,14 @@ struct DevicesSettingsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(device.name.isEmpty ? "E-Paper Display" : device.name)
                                     .fontWeight(.semibold)
+
                                 Text("ID: \(device.deviceId)")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
+
                             Spacer()
+
                             Button("Configure") {
                                 selectedDevice = device
                             }
@@ -38,27 +43,33 @@ struct DevicesSettingsView: View {
             }
 
             Section("Pair New Display") {
-                TextField("6-character display code", text: $deviceClaimCode)
-                    .textInputAutocapitalization(.characters)
-                
+                TextField(
+                    "6-character display code",
+                    text: $deviceClaimCode
+                )
+                .textInputAutocapitalization(.characters)
+
                 Button("Link Device") {
                     Task {
-                        if await manager.pairDevice(claimCode: deviceClaimCode) {
+                        if await manager.pairDevice(
+                            claimCode: deviceClaimCode
+                        ) {
                             deviceClaimCode = ""
                             await manager.fetchPairedDevices()
                         }
                     }
                 }
-                .disabled(deviceClaimCode.isEmpty || manager.isLoading)
+                .disabled(
+                    deviceClaimCode.isEmpty ||
+                    manager.isLoading
+                )
             }
         }
         .navigationTitle("Devices")
         .sheet(item: $selectedDevice) { (device: PairedDevice) in
             DisplayConfigView(device: device)
                 .environmentObject(auth)
-        }
-        .task {
-            await manager.fetchPairedDevices()
+                .environmentObject(settingsViewModel)
         }
     }
 }

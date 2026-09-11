@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
-    @StateObject private var viewModel = SettingsViewModel()
+    @EnvironmentObject var viewModel: SettingsViewModel
 
     let intervalOptions = [60, 300, 600, 1800, 3600]
 
@@ -48,11 +48,6 @@ struct PreferencesSettingsView: View {
             }
         }
         .navigationTitle("Preferences")
-        .task {
-            if let userId = auth.userId {
-                await viewModel.loadData(currentUserId: userId)
-            }
-        }
     }
 
     private func saveChanges() {
@@ -65,6 +60,7 @@ struct PreferencesSettingsView: View {
 
     private func intervalString(for seconds: Int) -> String {
         let minutes = seconds / 60
+
         if minutes < 60 {
             return "\(minutes) min\(minutes == 1 ? "" : "s")"
         } else {
