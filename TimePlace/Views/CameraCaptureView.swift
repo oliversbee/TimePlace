@@ -9,26 +9,58 @@ struct CameraCaptureView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            // Main, full-screen feed
-            CameraPreview(layer: camera.mainIsBack ? camera.backPreviewLayer : camera.frontPreviewLayer)
-                .ignoresSafeArea()
 
-            // Secondary feed, small, bottom-right corner — only shown in "Both" mode.
-            if camera.captureMode == .both {
-                CameraPreview(layer: camera.mainIsBack ? camera.frontPreviewLayer : camera.backPreviewLayer)
-                    .frame(width: 120, height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white, lineWidth: 3))
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 140)
-                    .onTapGesture { camera.swapMain() }
-                    .shadow(radius: 6)
+            // MARK: Main Camera
+
+            CameraPreview(
+                layer: camera.mainIsBack
+                    ? camera.backPreviewLayer
+                    : camera.frontPreviewLayer
+            )
+            .ignoresSafeArea()
+
+            // MARK: Secondary Camera
+
+            // IMPORTANT:
+            // Keep this CameraPreview permanently attached.
+            // Do not conditionally create/remove it when switching
+            // between Both and One mode.
+            CameraPreview(
+                layer: camera.mainIsBack
+                    ? camera.frontPreviewLayer
+                    : camera.backPreviewLayer
+            )
+            .frame(width: 120, height: 160)
+            .clipShape(
+                RoundedRectangle(cornerRadius: 16)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.white, lineWidth: 3)
+            )
+            .padding(.trailing, 20)
+            .padding(.bottom, 140)
+            .opacity(
+                camera.captureMode == .both ? 1 : 0
+            )
+            .allowsHitTesting(
+                camera.captureMode == .both
+            )
+            .onTapGesture {
+                camera.swapMain()
             }
+            .shadow(radius: 6)
+
+            // MARK: Controls
 
             VStack {
-                // Top Overlay Controls Header
+
+                // MARK: Top Overlay Controls
+
                 HStack(alignment: .center) {
+
                     // Top Left: Settings Button
+
                     Button {
                         onOpenMenu()
                     } label: {
@@ -36,83 +68,140 @@ struct CameraCaptureView: View {
                             .font(.title2)
                             .foregroundColor(.white)
                             .padding(10)
-                            .background(.black.opacity(0.4))
+                            .background(
+                                .black.opacity(0.4)
+                            )
                             .clipShape(Circle())
                     }
-                    
+
                     Spacer()
 
-                    // Top Right Controls: Mode Selector + Camera Flip Toggle
+                    // Top Right Controls
+
                     HStack(spacing: 12) {
-                        Picker("Mode", selection: $camera.captureMode) {
-                            ForEach(CaptureMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
+
+                        // Mode Selector
+
+                        Picker(
+                            "Mode",
+                            selection: $camera.captureMode
+                        ) {
+                            ForEach(
+                                CaptureMode.allCases
+                            ) { mode in
+                                Text(mode.rawValue)
+                                    .tag(mode)
                             }
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 130)
-                        .background(.black.opacity(0.35))
+                        .background(
+                            .black.opacity(0.35)
+                        )
                         .cornerRadius(8)
 
                         // Camera Flip Button
+
                         Button {
                             camera.swapMain()
                         } label: {
-                            Image(systemName: "arrow.triangle.2.circlepath.camera")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .background(.black.opacity(0.4))
-                                .clipShape(Circle())
+                            Image(
+                                systemName:
+                                    "arrow.triangle.2.circlepath.camera"
+                            )
+                            .font(.title3)
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(
+                                .black.opacity(0.4)
+                            )
+                            .clipShape(Circle())
                         }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 50)
 
+                // MARK: Error Message
+
                 if let error = camera.errorMessage {
                     Text(error)
                         .foregroundColor(.white)
                         .font(.footnote)
                         .padding()
-                        .background(.black.opacity(0.6))
+                        .background(
+                            .black.opacity(0.6)
+                        )
                         .cornerRadius(12)
                         .padding()
                 }
 
                 Spacer()
 
-                // Bottom Capture Controls
+                // MARK: Bottom Capture Controls
+
                 HStack {
-                    // Spacer to balance the right-side flash button
+
+                    // Spacer to balance the flash button
+
                     Spacer()
                         .frame(width: 44)
 
                     Spacer()
 
                     // Shutter Capture Button
+
                     Button {
-                        camera.capturePhoto(completion: onCaptured)
+                        camera.capturePhoto(
+                            completion: onCaptured
+                        )
                     } label: {
                         Circle()
-                            .stroke(.white, lineWidth: 4)
-                            .frame(width: 76, height: 76)
-                            .overlay(Circle().fill(.white).frame(width: 64, height: 64))
+                            .stroke(
+                                .white,
+                                lineWidth: 4
+                            )
+                            .frame(
+                                width: 76,
+                                height: 76
+                            )
+                            .overlay(
+                                Circle()
+                                    .fill(.white)
+                                    .frame(
+                                        width: 64,
+                                        height: 64
+                                    )
+                            )
                     }
 
                     Spacer()
 
-                    // Bottom Right: Flash Toggle Button
+                    // Flash Toggle Button
+
                     Button {
                         isFlashOn.toggle()
-                        // Set flash mode on CameraManager instance
+
+                        // Existing flash UI behaviour.
+                        // Flash configuration can be added separately.
                     } label: {
-                        Image(systemName: isFlashOn ? "bolt.fill" : "bolt.slash.fill")
-                            .font(.title3)
-                            .foregroundColor(isFlashOn ? .yellow : .white)
-                            .padding(10)
-                            .background(.black.opacity(0.4))
-                            .clipShape(Circle())
+                        Image(
+                            systemName:
+                                isFlashOn
+                                ? "bolt.fill"
+                                : "bolt.slash.fill"
+                        )
+                        .font(.title3)
+                        .foregroundColor(
+                            isFlashOn
+                                ? .yellow
+                                : .white
+                        )
+                        .padding(10)
+                        .background(
+                            .black.opacity(0.4)
+                        )
+                        .clipShape(Circle())
                     }
                 }
                 .padding(.horizontal, 20)
@@ -120,7 +209,10 @@ struct CameraCaptureView: View {
             }
         }
         .background(Color.black)
-        .ignoresSafeArea() // Prevents safe area recalculation from revealing a white bar at the bottom
+        .ignoresSafeArea()
+
+        // MARK: Camera Lifecycle
+
         .onAppear {
             camera.configure()
             camera.start()
