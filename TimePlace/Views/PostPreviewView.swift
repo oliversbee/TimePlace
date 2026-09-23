@@ -16,7 +16,8 @@ struct PostPreviewView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+
+        ZStack {
 
             // MARK: Main Image
 
@@ -24,92 +25,93 @@ struct PostPreviewView: View {
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
+        }
+        .overlay(alignment: .bottomTrailing) {
 
-            // MARK: Secondary Image Preview
+            // MARK: Secondary Image
 
             if let secondaryImage {
 
                 Image(uiImage: secondaryImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(
-                        width: 120,
-                        height: 160
-                    )
-                    .clipShape(
-                        RoundedRectangle(
-                            cornerRadius: 16
-                        )
-                    )
+                    .frame(width: 120, height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .overlay(
-                        RoundedRectangle(
-                            cornerRadius: 16
-                        )
-                        .stroke(
-                            .white,
-                            lineWidth: 3
-                        )
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(.white, lineWidth: 3)
                     )
                     .padding(.trailing, 20)
                     .padding(.bottom, 140)
                     .shadow(radius: 6)
             }
+        }
+        .overlay {
 
-            // MARK: Controls
-
-            VStack {
-
-                if let errorMessage {
-
-                    Text(errorMessage)
-                        .foregroundColor(.white)
-                        .font(.footnote)
-                        .padding()
-                        .background(
-                            .black.opacity(0.6)
-                        )
-                        .cornerRadius(12)
-                        .padding()
-                }
-
-                Spacer()
-
-                HStack(spacing: 40) {
-
-                    Button(
-                        "Retake",
-                        action: onRetake
-                    )
-                    .buttonStyle(.bordered)
-                    .tint(.white)
-                    .disabled(isUploading)
-
-                    Button {
-                        upload()
-                    } label: {
-
-                        Group {
-
-                            if isUploading {
-
-                                ProgressView()
-                                    .tint(.white)
-
-                            } else {
-
-                                Text("Upload")
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                        .frame(minWidth: 100)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isUploading)
-                }
-                .padding(.bottom, 40)
-            }
+            // =========================================================
+            // CONTROLS
+            // =========================================================
+            //
+            // This overlay is given the full screen frame explicitly.
+            // Without that, the outer ZStack's alignment pulls the whole
+            // VStack — buttons included — toward one corner instead of
+            // centering it, which was the off-screen-looking bug.
+            //
+            controls
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color.black)
+        .ignoresSafeArea()
+    }
+
+    // =====================================================================
+    // CONTROLS
+    // =====================================================================
+
+    private var controls: some View {
+
+        VStack {
+
+            if let errorMessage {
+                GlassStatusBanner(text: errorMessage)
+                    .padding(.top, 20)
+            }
+
+            Spacer()
+
+            HStack(spacing: 16) {
+
+                Button("Retake", action: onRetake)
+                    .buttonStyle(
+                        SecondaryCapsuleButtonStyle(isDisabled: isUploading)
+                    )
+                    .disabled(isUploading)
+
+                Button {
+                    upload()
+                } label: {
+
+                    Group {
+
+                        if isUploading {
+
+                            ProgressView()
+                                .tint(.white)
+
+                        } else {
+
+                            Label("Send", systemImage: "paperplane.fill")
+                        }
+                    }
+                    .frame(minWidth: 40)
+                }
+                .buttonStyle(
+                    PrimaryCapsuleButtonStyle(isDisabled: isUploading)
+                )
+                .disabled(isUploading)
+            }
+            .padding(.bottom, 44)
+        }
     }
 
     // MARK: Upload
@@ -164,7 +166,7 @@ struct PostPreviewView: View {
                     isUploading = false
 
                     errorMessage =
-                        "Upload failed: \(error.localizedDescription)"
+                        "Send failed: \(error.localizedDescription)"
                 }
             }
         }

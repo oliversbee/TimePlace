@@ -94,7 +94,7 @@ final class SupabaseManager {
         //       4A7B...jpg
         //
         let fileName =
-            "\(userId.uuidString)/\(UUID().uuidString).jpg"
+        "\(userId.uuidString.lowercased())/\(UUID().uuidString).jpg"
 
         try await client.storage
             .from("posts")
