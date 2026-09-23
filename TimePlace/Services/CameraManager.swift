@@ -114,12 +114,16 @@ final class CameraManager: NSObject, ObservableObject {
         if outputConnection.isVideoOrientationSupported {
             outputConnection.videoOrientation = .portrait
         }
-        outputConnection.isVideoMirrored = true
+        if outputConnection.isVideoMirroringSupported {
+            outputConnection.isVideoMirrored = true
+        }
 
         let previewLayer = AVCaptureVideoPreviewLayer(sessionWithNoConnection: session)
         previewLayer.videoGravity = .resizeAspectFill
         let previewConnection = AVCaptureConnection(inputPort: port, videoPreviewLayer: previewLayer)
-        previewConnection.isVideoMirrored = true
+        if previewConnection.isVideoMirroringSupported {
+            previewConnection.isVideoMirrored = true
+        }
         guard session.canAddConnection(previewConnection) else { throw CameraError.setupFailed }
         session.addConnection(previewConnection)
         frontPreviewLayer = previewLayer
