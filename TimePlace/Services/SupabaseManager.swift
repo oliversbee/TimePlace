@@ -65,7 +65,7 @@ final class SupabaseManager {
         )
     }
 
-    // MARK: Upload Image
+    // MARK: - Upload Image
 
     private func uploadImage(
         _ image: UIImage,
@@ -94,7 +94,7 @@ final class SupabaseManager {
         //       4A7B...jpg
         //
         let fileName =
-        "\(userId.uuidString.lowercased())/\(UUID().uuidString).jpg"
+            "\(userId.uuidString.lowercased())/\(UUID().uuidString).jpg"
 
         try await client.storage
             .from("posts")
@@ -115,7 +115,7 @@ final class SupabaseManager {
         return fileName
     }
 
-    // MARK: Insert Image Row
+    // MARK: - Insert Image Row
 
     private func insertImageRow(
         userId: UUID,
@@ -135,19 +135,29 @@ final class SupabaseManager {
             .execute()
     }
 
-    // MARK: Combine Images
+    // MARK: - Combine Images
 
     /// Combines the main and secondary camera images into
     /// a single image.
     ///
     /// The main image fills the canvas.
-    /// The secondary image is placed in the bottom-right.
+    /// The secondary image is placed in the bottom-right
+    /// while preserving its original aspect ratio.
     private func combineImages(
         main: UIImage,
         secondary: UIImage
     ) -> UIImage {
 
-        let canvasSize = main.size
+        // Normalise orientation first.
+        //
+        // Front and back camera photos can contain orientation
+        // metadata rather than having the pixels physically rotated.
+        // Normalising them makes width/height represent the actual
+        // displayed image dimensions.
+        let mainImage = main.fixedOrientation()
+        let secondaryImage = secondary.fixedOrientation()
+
+        let canvasSize = mainImage.size
 
         let renderer = UIGraphicsImageRenderer(
             size: canvasSize
@@ -164,7 +174,7 @@ final class SupabaseManager {
             // MAIN IMAGE
             // ------------------------------------------------
 
-            main.draw(in: canvas)
+            mainImage.draw(in: canvas)
 
             // ------------------------------------------------
             // SECONDARY IMAGE
@@ -173,8 +183,14 @@ final class SupabaseManager {
             let overlayWidth =
                 min(canvasSize.width * 0.25, 360)
 
+            // Preserve the actual aspect ratio of the
+            // secondary camera image.
+            let secondaryAspectRatio =
+                secondaryImage.size.height /
+                secondaryImage.size.width
+
             let overlayHeight =
-                overlayWidth * (160.0 / 120.0)
+                overlayWidth * secondaryAspectRatio
 
             let margin =
                 canvasSize.width * 0.04
@@ -192,7 +208,10 @@ final class SupabaseManager {
                 height: overlayHeight
             )
 
-            // Clip the secondary image to rounded corners.
+            // ------------------------------------------------
+            // CLIP SECONDARY IMAGE
+            // ------------------------------------------------
+
             let roundedPath = UIBezierPath(
                 roundedRect: overlayRect,
                 cornerRadius: 16
@@ -200,7 +219,7 @@ final class SupabaseManager {
 
             roundedPath.addClip()
 
-            secondary.draw(
+            secondaryImage.draw(
                 in: overlayRect
             )
 
@@ -417,5 +436,36 @@ final class SupabaseManager {
             .eq("viewer_id", value: viewerId)
             .eq("target_id", value: targetId)
             .execute()
+    }
+}
+
+// MARK: - UIImage Orientation
+
+extension UIImage {
+
+    /// Returns an image with its orientation physically rendered
+    /// into the pixels rather than stored only as orientation metadata.
+    func fixedOrientation() -> UIImage {
+
+        guard imageOrientation != .up else {
+            return self
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+
+        let renderer = UIGraphicsImageRenderer(
+            size: size,
+            format: format
+        )
+
+        return renderer.image { _ in
+            draw(
+                in: CGRect(
+                    origin: .zero,
+                    size: size
+                )
+            )
+        }
     }
 }
