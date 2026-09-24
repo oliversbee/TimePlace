@@ -17,51 +17,100 @@ struct PostPreviewView: View {
 
     var body: some View {
 
-        ZStack {
+        GeometryReader { geometry in
 
-            // MARK: Main Image
+            ZStack {
 
-            Image(uiImage: mainImage)
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-        }
-        .overlay(alignment: .bottomTrailing) {
+                // MARK: Main Image
 
-            // MARK: Secondary Image
-
-            if let secondaryImage {
-
-                Image(uiImage: secondaryImage)
+                Image(uiImage: mainImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 120, height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(.white, lineWidth: 3)
+                    .frame(
+                        width: geometry.size.width,
+                        height: geometry.size.height
                     )
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 140)
-                    .shadow(radius: 6)
-            }
-        }
-        .overlay {
+                    .clipped()
 
-            // =========================================================
-            // CONTROLS
-            // =========================================================
-            //
-            // This overlay is given the full screen frame explicitly.
-            // Without that, the outer ZStack's alignment pulls the whole
-            // VStack — buttons included — toward one corner instead of
-            // centering it, which was the off-screen-looking bug.
-            //
-            controls
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // MARK: Secondary Image
+
+                if let secondaryImage {
+
+                    secondaryImageView(
+                        image: secondaryImage,
+                        screenSize: geometry.size
+                    )
+                }
+
+                // MARK: Controls
+
+                controls
+                    .frame(
+                        width: geometry.size.width,
+                        height: geometry.size.height
+                    )
+            }
+            .background(Color.black)
+            .ignoresSafeArea()
         }
-        .background(Color.black)
-        .ignoresSafeArea()
+    }
+
+    // =====================================================================
+    // SECONDARY IMAGE
+    // =====================================================================
+
+    private func secondaryImageView(
+        image: UIImage,
+        screenSize: CGSize
+    ) -> some View {
+
+        let maxWidth: CGFloat = 120
+        let maxHeight: CGFloat = 160
+
+        let imageWidth = image.size.width
+        let imageHeight = image.size.height
+
+        let aspectRatio = imageHeight / imageWidth
+
+        var width = maxWidth
+        var height = width * aspectRatio
+
+        // If the calculated height is too large,
+        // scale the image down to fit inside the box.
+        if height > maxHeight {
+            height = maxHeight
+            width = height / aspectRatio
+        }
+
+        return Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(
+                width: width,
+                height: height
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: 16
+                )
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: 16
+                )
+                .stroke(
+                    .white,
+                    lineWidth: 3
+                )
+            )
+            .shadow(radius: 6)
+            .frame(
+                maxWidth: screenSize.width - 40,
+                maxHeight: screenSize.height - 40,
+                alignment: .bottomTrailing
+            )
+            .padding(.trailing, 20)
+            .padding(.bottom, 140)
     }
 
     // =====================================================================
@@ -83,7 +132,9 @@ struct PostPreviewView: View {
 
                 Button("Retake", action: onRetake)
                     .buttonStyle(
-                        SecondaryCapsuleButtonStyle(isDisabled: isUploading)
+                        SecondaryCapsuleButtonStyle(
+                            isDisabled: isUploading
+                        )
                     )
                     .disabled(isUploading)
 
@@ -100,13 +151,18 @@ struct PostPreviewView: View {
 
                         } else {
 
-                            Label("Send", systemImage: "paperplane.fill")
+                            Label(
+                                "Send",
+                                systemImage: "paperplane.fill"
+                            )
                         }
                     }
                     .frame(minWidth: 40)
                 }
                 .buttonStyle(
-                    PrimaryCapsuleButtonStyle(isDisabled: isUploading)
+                    PrimaryCapsuleButtonStyle(
+                        isDisabled: isUploading
+                    )
                 )
                 .disabled(isUploading)
             }
@@ -114,7 +170,9 @@ struct PostPreviewView: View {
         }
     }
 
-    // MARK: Upload
+    // =====================================================================
+    // UPLOAD
+    // =====================================================================
 
     private func upload() {
 
@@ -141,6 +199,7 @@ struct PostPreviewView: View {
                 //     -> one image
                 //
                 // Nothing is downloaded here.
+
                 try await SupabaseManager.shared.uploadImages(
                     userId: userId,
                     mainImage: mainImage,
