@@ -67,17 +67,8 @@ struct PostPreviewView: View {
         let maxWidth: CGFloat = 120
         let maxHeight: CGFloat = 160
 
-        let isPortrait: Bool = {
-            switch image.imageOrientation {
-            case .left, .leftMirrored, .right, .rightMirrored:
-                return true
-            default:
-                return false
-            }
-        }()
-
-        let imageWidth = isPortrait ? image.size.height : image.size.width
-        let imageHeight = isPortrait ? image.size.width : image.size.height
+        let imageWidth = image.size.width
+        let imageHeight = image.size.height
         let aspectRatio = imageHeight / max(imageWidth, 1)
 
         let width = min(maxWidth, maxHeight / max(aspectRatio, 0.001))
