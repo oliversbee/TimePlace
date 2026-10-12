@@ -69,18 +69,10 @@ struct PostPreviewView: View {
 
         let imageWidth = image.size.width
         let imageHeight = image.size.height
+        let aspectRatio = imageHeight / max(imageWidth, 1)
 
-        let aspectRatio = imageHeight / imageWidth
-
-        var width = maxWidth
-        var height = width * aspectRatio
-
-        // If the calculated height is too large,
-        // scale the image down to fit inside the box.
-        if height > maxHeight {
-            height = maxHeight
-            width = height / aspectRatio
-        }
+        let width = min(maxWidth, maxHeight / max(aspectRatio, 0.001))
+        let height = width * aspectRatio
 
         return Image(uiImage: image)
             .resizable()
@@ -90,27 +82,19 @@ struct PostPreviewView: View {
                 height: height
             )
             .clipShape(
-                RoundedRectangle(
-                    cornerRadius: 16
-                )
+                RoundedRectangle(cornerRadius: 16)
             )
             .overlay(
-                RoundedRectangle(
-                    cornerRadius: 16
-                )
-                .stroke(
-                    .white,
-                    lineWidth: 3
-                )
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.white, lineWidth: 3)
             )
             .shadow(radius: 6)
-            .frame(
-                maxWidth: screenSize.width - 40,
-                maxHeight: screenSize.height - 40,
-                alignment: .bottomTrailing
+            // Same anchor as the live camera PiP: 20 pt from the right
+            // and 140 pt from the bottom, independent of the fitted size.
+            .position(
+                x: screenSize.width - 20 - width / 2,
+                y: screenSize.height - 140 - height / 2
             )
-            .padding(.trailing, 20)
-            .padding(.bottom, 140)
     }
 
     // =====================================================================

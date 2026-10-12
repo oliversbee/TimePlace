@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct CameraCaptureView: View {
 
@@ -21,6 +22,12 @@ struct CameraCaptureView: View {
 
             GeometryReader { geo in
 
+                // Match each live PiP to the corresponding camera's still-photo
+                // aspect ratio. The post-capture preview uses the captured
+                // UIImage's dimensions with the same 120 x 160 maximum bounds.
+                let backPiPSize = pipSize(for: camera.backPreviewLayer)
+                let frontPiPSize = pipSize(for: camera.frontPreviewLayer)
+
                 ZStack {
 
                     // =================================================
@@ -41,10 +48,7 @@ struct CameraCaptureView: View {
                             isVisible: camera.mainIsBack
                                 || camera.captureMode == .both,
                             container: geo.size,
-                            pipSize: CGSize(
-                                width: pipWidth,
-                                height: pipHeight
-                            ),
+                            pipSize: backPiPSize,
                             pipTrailingInset: pipTrailingInset,
                             pipBottomInset: pipBottomInset,
                             onTapWhenPiP: {
@@ -66,10 +70,7 @@ struct CameraCaptureView: View {
                             isVisible: !camera.mainIsBack
                                 || camera.captureMode == .both,
                             container: geo.size,
-                            pipSize: CGSize(
-                                width: pipWidth,
-                                height: pipHeight
-                            ),
+                            pipSize: frontPiPSize,
                             pipTrailingInset: pipTrailingInset,
                             pipBottomInset: pipBottomInset,
                             onTapWhenPiP: {
@@ -105,6 +106,73 @@ struct CameraCaptureView: View {
         .onDisappear {
             camera.stop()
         }
+    }
+
+    /// Returns the PiP size that fits the camera's still-photo aspect ratio
+    /// inside the same 120 x 160 point bounds used after capture.
+    private func pipSize(for previewLayer: AVCaptureVideoPreviewLayer?) -> CGSize {
+
+        let maximumSize = CGSize(width: pipWidth, height: pipHeight)
+
+        guard
+            let previewLayer,
+            let session = previewLayer.session
+        else {
+            return maximumSize
+        }
+
+        let previewPortIDs = Set(
+            (previewLayer.connection?.inputPorts ?? []).map { ObjectIdentifier($0) }
+        )
+
+        let photoOutputs = session.outputs.compactMap { $0 as? AVCapturePhotoOutput }
+
+        // If this is a multi-camera session, match the photo output to the
+        // preview layer's input port so front and back use the right dimensions.
+        let matchingOutput = photoOutputs.first { output in
+            guard let outputConnection = output.connection(with: .video) else {
+                return false
+            }
+
+            return outputConnection.inputPorts.contains { port in
+                previewPortIDs.contains(ObjectIdentifier(port))
+            }
+        } ?? photoOutputs.first
+
+        guard let matchingOutput else {
+            return maximumSize
+        }
+
+        if #available(iOS 16.0, *) {
+            let dimensions = matchingOutput.maxPhotoDimensions
+
+            if dimensions.width > 0, dimensions.height > 0 {
+                return fittedPiPSize(
+                    for: CGSize(
+                        width: CGFloat(dimensions.width),
+                        height: CGFloat(dimensions.height)
+                    )
+                )
+            }
+        }
+
+        // Safe fallback if the output does not expose still-photo dimensions.
+        return maximumSize
+    }
+
+    /// Mirrors the sizing calculation in PostPreviewView: preserve the source
+    /// aspect ratio, with a maximum width of 120 and height of 160 points.
+    private func fittedPiPSize(for sourceSize: CGSize) -> CGSize {
+
+        guard sourceSize.width > 0, sourceSize.height > 0 else {
+            return CGSize(width: pipWidth, height: pipHeight)
+        }
+
+        let aspectRatio = sourceSize.height / sourceSize.width
+        let width = min(pipWidth, pipHeight / aspectRatio)
+        let height = width * aspectRatio
+
+        return CGSize(width: width, height: height)
     }
 
     private var flashIcon: String {
