@@ -147,7 +147,8 @@ struct CameraCaptureView: View {
             let dimensions = matchingOutput.maxPhotoDimensions
 
             if dimensions.width > 0, dimensions.height > 0 {
-                let isPortrait = matchingOutput.connection(with: .video)?.videoOrientation.isPortrait ?? true
+                let orientation = matchingOutput.connection(with: .video)?.videoOrientation ?? .portrait
+                let isPortrait = (orientation == .portrait || orientation == .portraitUpsideDown)
                 let sourceWidth = isPortrait ? CGFloat(dimensions.height) : CGFloat(dimensions.width)
                 let sourceHeight = isPortrait ? CGFloat(dimensions.width) : CGFloat(dimensions.height)
 
