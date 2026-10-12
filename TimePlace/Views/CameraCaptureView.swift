@@ -147,10 +147,14 @@ struct CameraCaptureView: View {
             let dimensions = matchingOutput.maxPhotoDimensions
 
             if dimensions.width > 0, dimensions.height > 0 {
+                let isPortrait = matchingOutput.connection(with: .video)?.videoOrientation.isPortrait ?? true
+                let sourceWidth = isPortrait ? CGFloat(dimensions.height) : CGFloat(dimensions.width)
+                let sourceHeight = isPortrait ? CGFloat(dimensions.width) : CGFloat(dimensions.height)
+
                 return fittedPiPSize(
                     for: CGSize(
-                        width: CGFloat(dimensions.width),
-                        height: CGFloat(dimensions.height)
+                        width: sourceWidth,
+                        height: sourceHeight
                     )
                 )
             }
