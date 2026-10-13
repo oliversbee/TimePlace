@@ -130,8 +130,8 @@ final class SupabaseManager {
     ) -> UIImage {
 
         let targetSize = CGSize(
-            width: 800,
-            height: 480
+            width: 480,
+            height: 800
         )
 
         // Normalise orientation before calculating the fit.
