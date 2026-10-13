@@ -125,40 +125,60 @@ final class SupabaseManager {
     ///
     /// Setting renderer scale to 1 ensures the output is
     /// 800x480 pixels rather than 800x480 UIKit points.
+    
+    // MARK: - Prepare Image for Inky Frame
+
+    /// Produces an exact 800x480 landscape JPEG.
+    ///
+    /// Portrait photos are rotated 90 degrees to fit the
+    /// landscape Inky Frame. The complete image is preserved.
+    ///
+    /// The output is exactly 800x480 pixels.
     private func prepareForDisplay(
         _ image: UIImage
     ) -> UIImage {
 
         let targetSize = CGSize(
-            width: 480,
-            height: 800
+            width: 800,
+            height: 480
         )
 
-        // Normalise orientation before calculating the fit.
+        // Apply the original image's orientation to its pixels.
         let normalisedImage = image.fixedOrientation()
+
+        guard
+            normalisedImage.size.width > 0,
+            normalisedImage.size.height > 0
+        else {
+            return normalisedImage
+        }
 
         let sourceWidth = normalisedImage.size.width
         let sourceHeight = normalisedImage.size.height
 
-        guard sourceWidth > 0, sourceHeight > 0 else {
-            return normalisedImage
+        // Rotate portrait images so their dimensions become landscape.
+        let shouldRotate = sourceHeight > sourceWidth
+
+        let orientedSize: CGSize
+
+        if shouldRotate {
+            orientedSize = CGSize(
+                width: sourceHeight,
+                height: sourceWidth
+            )
+        } else {
+            orientedSize = normalisedImage.size
         }
 
+        // Fit the complete, rotated image inside 800x480.
+        // This preserves the aspect ratio and prevents cropping.
         let scale = min(
-            targetSize.width / sourceWidth,
-            targetSize.height / sourceHeight
+            targetSize.width / orientedSize.width,
+            targetSize.height / orientedSize.height
         )
 
-        let fittedWidth = sourceWidth * scale
-        let fittedHeight = sourceHeight * scale
-
-        // Centre the entire photo on the landscape canvas.
-        let imageRect = CGRect(
-            x: (targetSize.width - fittedWidth) / 2,
-            y: (targetSize.height - fittedHeight) / 2,
-            width: fittedWidth,
-            height: fittedHeight
-        )
+        let fittedWidth = orientedSize.width * scale
+        let fittedHeight = orientedSize.height * scale
 
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
@@ -171,7 +191,7 @@ final class SupabaseManager {
 
         return renderer.image { context in
 
-            // White background for any unused canvas area.
+            // White background for any unused space.
             UIColor.white.setFill()
             context.fill(
                 CGRect(
@@ -180,10 +200,43 @@ final class SupabaseManager {
                 )
             )
 
-            // Draw the photo without stretching or cropping it.
-            normalisedImage.draw(in: imageRect)
+            context.cgContext.saveGState()
+
+            if shouldRotate {
+                // Rotate the canvas 90 degrees clockwise.
+                context.cgContext.translateBy(
+                    x: targetSize.width,
+                    y: 0
+                )
+                context.cgContext.rotate(
+                    by: .pi / 2
+                )
+
+                // After rotation, the canvas is effectively 480x800.
+                let rotatedRect = CGRect(
+                    x: (targetSize.height - fittedHeight) / 2,
+                    y: (targetSize.width - fittedWidth) / 2,
+                    width: fittedHeight,
+                    height: fittedWidth
+                )
+
+                normalisedImage.draw(in: rotatedRect)
+            } else {
+                // Landscape photos are fitted without rotation.
+                let imageRect = CGRect(
+                    x: (targetSize.width - fittedWidth) / 2,
+                    y: (targetSize.height - fittedHeight) / 2,
+                    width: fittedWidth,
+                    height: fittedHeight
+                )
+
+                normalisedImage.draw(in: imageRect)
+            }
+
+            context.cgContext.restoreGState()
         }
     }
+
 
     // MARK: - Insert Image Row
 
