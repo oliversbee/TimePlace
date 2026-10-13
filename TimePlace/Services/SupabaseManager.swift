@@ -17,14 +17,16 @@ final class SupabaseManager {
 
     // MARK: - Images
 
-    /// Uploads a captured photo to the "posts" storage bucket.
+    /// Uploads a captured photo to the "posts" Storage bucket.
     ///
     /// One mode:
-    ///     mainImage -> one uploaded image -> one database row
+    ///     mainImage -> resized to 800x480 -> one uploaded image
+    ///     -> one database row
     ///
     /// Both mode:
     ///     mainImage + secondaryImage
     ///     -> combined into ONE image
+    ///     -> resized to 800x480
     ///     -> one uploaded image
     ///     -> one database row
     ///
@@ -38,8 +40,7 @@ final class SupabaseManager {
 
         let takenAt = Date()
 
-        // If Both mode was selected, combine the two images
-        // into a single image before uploading.
+        // Combine the images first if Both mode was selected.
         let imageToUpload: UIImage
 
         if let secondaryImage {
@@ -52,6 +53,7 @@ final class SupabaseManager {
         }
 
         // Upload exactly ONE file.
+        // The image is resized to 800x480 inside uploadImage().
         let imagePath = try await uploadImage(
             imageToUpload,
             userId: userId
@@ -72,7 +74,10 @@ final class SupabaseManager {
         userId: UUID
     ) async throws -> String {
 
-        guard let data = image.jpegData(
+        // Prepare a display-ready image before uploading.
+        let displayImage = prepareForDisplay(image)
+
+        guard let data = displayImage.jpegData(
             compressionQuality: 0.85
         ) else {
             throw NSError(
@@ -90,8 +95,8 @@ final class SupabaseManager {
         // Example:
         //
         // posts/
-        //   0fb6255a.../
-        //       4A7B...jpg
+        //   user-id/
+        //       image-id.jpg
         //
         let fileName =
             "\(userId.uuidString.lowercased())/\(UUID().uuidString).jpg"
@@ -106,13 +111,78 @@ final class SupabaseManager {
                 )
             )
 
-        // IMPORTANT:
-        //
-        // Do NOT call getPublicURL().
-        //
-        // The Storage bucket is private.
-        // We store the Storage path in the database.
+        // Keep the existing private Storage bucket behaviour.
+        // Store the Storage path in the database.
         return fileName
+    }
+
+    // MARK: - Prepare Image for Inky Frame
+
+    /// Produces an exact 800x480 pixel JPEG-ready image.
+    ///
+    /// The original photo is kept entirely visible.
+    /// Its proportions are preserved, and unused space is white.
+    ///
+    /// Setting renderer scale to 1 ensures the output is
+    /// 800x480 pixels rather than 800x480 UIKit points.
+    private func prepareForDisplay(
+        _ image: UIImage
+    ) -> UIImage {
+
+        let targetSize = CGSize(
+            width: 800,
+            height: 480
+        )
+
+        // Normalise orientation before calculating the fit.
+        let normalisedImage = image.fixedOrientation()
+
+        let sourceWidth = normalisedImage.size.width
+        let sourceHeight = normalisedImage.size.height
+
+        guard sourceWidth > 0, sourceHeight > 0 else {
+            return normalisedImage
+        }
+
+        let scale = min(
+            targetSize.width / sourceWidth,
+            targetSize.height / sourceHeight
+        )
+
+        let fittedWidth = sourceWidth * scale
+        let fittedHeight = sourceHeight * scale
+
+        // Centre the entire photo on the landscape canvas.
+        let imageRect = CGRect(
+            x: (targetSize.width - fittedWidth) / 2,
+            y: (targetSize.height - fittedHeight) / 2,
+            width: fittedWidth,
+            height: fittedHeight
+        )
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+
+        let renderer = UIGraphicsImageRenderer(
+            size: targetSize,
+            format: format
+        )
+
+        return renderer.image { context in
+
+            // White background for any unused canvas area.
+            UIColor.white.setFill()
+            context.fill(
+                CGRect(
+                    origin: .zero,
+                    size: targetSize
+                )
+            )
+
+            // Draw the photo without stretching or cropping it.
+            normalisedImage.draw(in: imageRect)
+        }
     }
 
     // MARK: - Insert Image Row
@@ -143,17 +213,14 @@ final class SupabaseManager {
     /// The main image fills the canvas.
     /// The secondary image is placed in the bottom-right
     /// while preserving its original aspect ratio.
+    ///
+    /// The completed composite is resized to 800x480
+    /// immediately before uploading.
     private func combineImages(
         main: UIImage,
         secondary: UIImage
     ) -> UIImage {
 
-        // Normalise orientation first.
-        //
-        // Front and back camera photos can contain orientation
-        // metadata rather than having the pixels physically rotated.
-        // Normalising them makes width/height represent the actual
-        // displayed image dimensions.
         let mainImage = main.fixedOrientation()
         let secondaryImage = secondary.fixedOrientation()
 
@@ -170,24 +237,16 @@ final class SupabaseManager {
                 size: canvasSize
             )
 
-            // ------------------------------------------------
-            // MAIN IMAGE
-            // ------------------------------------------------
-
+            // Main image.
             mainImage.draw(in: canvas)
 
-            // ------------------------------------------------
-            // SECONDARY IMAGE
-            // ------------------------------------------------
-
+            // Secondary image inset.
             let overlayWidth =
                 min(canvasSize.width * 0.25, 360)
 
-            // Preserve the actual aspect ratio of the
-            // secondary camera image.
             let secondaryAspectRatio =
                 secondaryImage.size.height /
-                secondaryImage.size.width
+                max(secondaryImage.size.width, 1)
 
             let overlayHeight =
                 overlayWidth * secondaryAspectRatio
@@ -199,45 +258,34 @@ final class SupabaseManager {
                 x: canvasSize.width
                     - overlayWidth
                     - margin,
-
                 y: canvasSize.height
                     - overlayHeight
                     - margin,
-
                 width: overlayWidth,
                 height: overlayHeight
             )
 
-            // ------------------------------------------------
-            // CLIP SECONDARY IMAGE
-            // ------------------------------------------------
-
+            // Clip the inset to rounded corners.
             let roundedPath = UIBezierPath(
                 roundedRect: overlayRect,
                 cornerRadius: 16
             )
 
+            context.cgContext.saveGState()
             roundedPath.addClip()
 
-            secondaryImage.draw(
-                in: overlayRect
-            )
+            secondaryImage.draw(in: overlayRect)
 
-            // ------------------------------------------------
-            // BORDER
-            // ------------------------------------------------
+            context.cgContext.restoreGState()
 
-            context.cgContext.resetClip()
-
+            // White border around the inset.
             let borderPath = UIBezierPath(
                 roundedRect: overlayRect,
                 cornerRadius: 16
             )
 
             borderPath.lineWidth = 6
-
             UIColor.white.setStroke()
-
             borderPath.stroke()
         }
     }
@@ -260,8 +308,8 @@ final class SupabaseManager {
     }
 
     /// Saves the complete preference row.
-    /// Upsert means this works whether the user's
-    /// preferences row already exists or needs to be created.
+    /// Upsert works whether the preferences row exists or
+    /// needs to be created.
     func updatePreferences(
         userId: UUID,
         preferences: UpdatedPreferences
