@@ -624,15 +624,17 @@ func unhideUser(
             return true
 
         } catch {
+            print("PAIR FAILED:", error)
+            print("PAIR FAILED localizedDescription:", error.localizedDescription)
 
-            print(
-                "Failed to pair device:",
-                error
-            )
+            if let postgrestError = error as? PostgrestError {
+                print("PostgREST code:", postgrestError.code ?? "nil")
+                print("PostgREST message:", postgrestError.message)
+                print("PostgREST detail:", postgrestError.detail ?? "nil")
+                print("PostgREST hint:", postgrestError.hint ?? "nil")
+            }
 
-            errorMessage =
-                "Failed to pair device. Code may be expired or invalid."
-
+            errorMessage = "Failed to pair device. Code may be expired or invalid."
             isLoading = false
             return false
         }
