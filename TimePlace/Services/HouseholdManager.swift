@@ -553,13 +553,14 @@ func unhideUser(
 
         do {
 
+            // Devices assigned to the current user.
+            // RLS on public.devices restricts rows to assigned_user_id = auth.uid().
             pairedDevices = try await client
-                .from("device_claims")
-                .select("device_id")
-                .not(
-                    "assigned_user_id",
-                    operator: .is,
-                    value: "null"
+                .from("devices")
+                .select("device_id, name")
+                .order(
+                    "created_at",
+                    ascending: false
                 )
                 .execute()
                 .value
@@ -587,7 +588,7 @@ func unhideUser(
         isLoading = true
         errorMessage = nil
 
-        guard let userId = client.auth.currentUser?.id else {
+        guard client.auth.currentUser?.id != nil else {
 
             errorMessage = "Not authenticated."
 
@@ -595,28 +596,29 @@ func unhideUser(
             return false
         }
 
+        let normalizedCode = claimCode
+            .uppercased()
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
         do {
 
-            struct UpdateClaim: Encodable {
-                let assigned_user_id: UUID
+            struct ClaimDeviceParams: Encodable {
+                let p_claim_code: String
             }
 
-            try await client
-                .from("device_claims")
-                .update(
-                    UpdateClaim(
-                        assigned_user_id: userId
+            // claim_device() validates the code, expires it, and writes
+            // the permanent assignment into public.devices atomically.
+            let _: String = try await client
+                .rpc(
+                    "claim_device",
+                    params: ClaimDeviceParams(
+                        p_claim_code: normalizedCode
                     )
                 )
-                .eq(
-                    "claim_code",
-                    value: claimCode
-                        .uppercased()
-                        .trimmingCharacters(
-                            in: .whitespaces
-                        )
-                )
                 .execute()
+                .value
 
             isLoading = false
             return true
