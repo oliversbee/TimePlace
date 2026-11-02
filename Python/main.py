@@ -1,16 +1,17 @@
 # TimePlace — main.py
 #
-# Orchestrates the full device lifecycle:
-#   1. Wi-Fi connection (delegated to wificonnect.py)
-#   2. Device identity (device_id + device_secret, stored in flash)
-#   3. Device claiming (shows claim code until the app pairs it)
-#   4. Photo cache refresh (downloads new images on a slow interval)
-#   5. Photo cycle loop (displays cached images on a fast interval)
+# Battery-optimised lifecycle:
+#   1. Wake (Pico resets; main.py runs from the top)
+#   2. Mount SD, load state from disk
+#   3. If not claimed: poll device-status once, show claim code if changed,
+#      sleep briefly, repeat
+#   4. If claimed: if hourly refresh is due, connect WiFi, refresh cache,
+#      disconnect WiFi
+#   5. Show the next cached image (no WiFi needed)
+#   6. Deep sleep for the configured display interval
 #
-# The display interval comes from user_preferences.image_interval_seconds,
-# pulled from device-images on each cache refresh. The nickname drawn on
-# the photo's bottom-left corner is contrasted against the local pixel
-# brightness at that corner.
+# All state that must survive sleep is persisted to SD card, because deep
+# sleep resets the Pico and clears RAM.
 
 import gc
 import json
@@ -51,30 +52,26 @@ DEVICE_IMAGES_URL  = SUPABASE_URL + "/functions/v1/device-images"
 
 DEVICE_CONFIG_FILE = "device_config.json"
 
-# How often to contact the server for a fresh list of images and download any
-# new ones. 3600 = one hour.
+# How often to contact the server for a fresh list of images. 3600 = 1 hour.
 IMAGE_REFRESH_SECONDS = 3600
 
-# Fallback display interval used when the server doesn't send a preference.
-# The real value comes from user_preferences.image_interval_seconds and is
-# pulled at every cache refresh.
+# Fallback display interval if the server preference is missing. Real value
+# comes from user_preferences.image_interval_seconds.
 DEFAULT_IMAGE_DISPLAY_SECONDS = 60
 
-# How often to poll device-status while waiting for the user to claim.
-CLAIM_POLL_SECONDS = 5
+# Minimum display interval. Values below this are clamped up, because the
+# panel refresh alone takes 12-15s and anything faster would burn batteries.
+MIN_DISPLAY_INTERVAL_SECONDS = 60
 
-# Cap on how many images to keep cached on disk.
+# Cap on cached images.
 MAX_CACHED_IMAGES = 30
-
-# Network request timeout, in seconds.
-HTTP_TIMEOUT = 20
 
 # Cache storage.
 CACHE_DIR     = "/sd/timeplace_cache"
 MANIFEST_FILE = CACHE_DIR + "/manifest.json"
+STATE_FILE    = CACHE_DIR + "/state.json"
 
-# Native panel dimensions (landscape, because the display is created with
-# rotate=0 and all UI is drawn rotated by wificonnect.py).
+# Native panel dimensions (landscape; UI is drawn rotated by wificonnect.py).
 NATIVE_W = 800
 NATIVE_H = 480
 
@@ -196,7 +193,41 @@ def download_image(url, path):
 
 
 # ---------------------------------------------------------------------------
-# Cache manifest
+# State (survives deep sleep via SD card)
+# ---------------------------------------------------------------------------
+
+def load_state():
+    defaults = {
+        "is_claimed": False,
+        "shown_claim_code": "",
+        "last_displayed": "",
+        "image_index": 0,
+        "wake_count": 0,
+        "seconds_since_refresh": 0,
+        "force_refresh": True,
+    }
+    try:
+        with open(STATE_FILE, "r") as f:
+            data = json.load(f)
+        for k, v in defaults.items():
+            data.setdefault(k, v)
+        return data
+    except Exception:
+        return defaults
+
+
+def save_state(state):
+    try:
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f)
+        return True
+    except Exception as exc:
+        print("State save failed:", exc)
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Manifest
 # ---------------------------------------------------------------------------
 
 def load_manifest():
@@ -206,7 +237,6 @@ def load_manifest():
         if not isinstance(data, dict):
             raise ValueError("bad manifest")
         data.setdefault("images", [])
-        data.setdefault("last_refresh", 0)
         data.setdefault("preferences", {})
         data.setdefault("nicknames", {})
         data.setdefault("hidden_users", [])
@@ -214,7 +244,6 @@ def load_manifest():
     except Exception:
         return {
             "images": [],
-            "last_refresh": 0,
             "preferences": {},
             "nicknames": {},
             "hidden_users": [],
@@ -232,10 +261,42 @@ def save_manifest(manifest):
 
 
 # ---------------------------------------------------------------------------
-# Display screens (portrait, 480 x 800)
+# WiFi teardown — critical before sleep
 # ---------------------------------------------------------------------------
 
-def show_status(title, lines, footer=None):
+def turn_off_wifi():
+    """Properly tear down WiFi before deep sleep.
+
+    If the radio is left active, the Pico either wakes immediately or keeps
+    drawing current trying to maintain a dead link.
+    """
+    try:
+        import network
+        wlan = network.WLAN(network.STA_IF)
+        try:
+            wlan.disconnect()
+        except Exception:
+            pass
+        try:
+            wlan.active(False)
+        except Exception:
+            pass
+        try:
+            wlan.deinit()
+        except Exception:
+            pass
+        del wlan
+        gc.collect()
+        time.sleep_ms(1)
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Display screens
+# ---------------------------------------------------------------------------
+
+def show_status(title, lines):
     try:
         graphics.set_pen(WHITE)
         graphics.clear()
@@ -247,9 +308,6 @@ def show_status(title, lines, footer=None):
         for line in lines:
             text(line, 20, y, PORTRAIT_WIDTH - 40, 2)
             y += 40
-
-        if footer:
-            text(footer, 20, PORTRAIT_HEIGHT - 60, PORTRAIT_WIDTH - 40, 2)
 
         graphics.update()
         gc.collect()
@@ -290,9 +348,6 @@ def show_claim_code(claim_code):
 # ---------------------------------------------------------------------------
 
 def _get_pixel_pen(lx, ly):
-    """Return the pen value at landscape pixel (lx, ly), or None if
-    the framebuffer cannot be read."""
-    # Try get_pixel if the build exposes it.
     try:
         v = graphics.get_pixel(lx, ly)
         if isinstance(v, int):
@@ -300,7 +355,6 @@ def _get_pixel_pen(lx, ly):
     except Exception:
         pass
 
-    # Try direct buffer access.
     try:
         buf = graphics.buffer
         if callable(buf):
@@ -312,8 +366,6 @@ def _get_pixel_pen(lx, ly):
     if not (0 <= lx < NATIVE_W and 0 <= ly < NATIVE_H):
         return None
 
-    # 4bpp packed (two pixels per byte). This is the common layout for
-    # Inky Frame Spectra panels.
     if buf_len == (NATIVE_W * NATIVE_H) // 2:
         idx = ly * (NATIVE_W // 2) + (lx >> 1)
         if idx >= buf_len:
@@ -321,33 +373,26 @@ def _get_pixel_pen(lx, ly):
         b = buf[idx]
         return (b >> 4) if (lx & 1) == 0 else (b & 0x0F)
 
-    # 8bpp
     if buf_len == NATIVE_W * NATIVE_H:
-        return buf[idx] if False else buf[ly * NATIVE_W + lx]
+        return buf[ly * NATIVE_W + lx]
 
     return None
 
 
 def _is_portrait_region_dark(px, py, pw, ph, sample_step=8):
-    """Sample a portrait-space rectangle, return True if mostly black."""
     lx1, ly1, lw, lh = portrait_to_landscape_rect(px, py, pw, ph)
-
-    black = BLACK
     dark = 0
     total = 0
-
     for ly in range(ly1, ly1 + lh, sample_step):
         for lx in range(lx1, lx1 + lw, sample_step):
             v = _get_pixel_pen(lx, ly)
             if v is None:
                 continue
             total += 1
-            if v == black:
+            if v == BLACK:
                 dark += 1
-
     if total == 0:
-        return False  # Can't read; assume light and draw black text.
-
+        return False
     return (dark / total) > 0.5
 
 
@@ -356,12 +401,6 @@ def _is_portrait_region_dark(px, py, pw, ph, sample_step=8):
 # ---------------------------------------------------------------------------
 
 def display_photo(path, nickname=None):
-    """Draw the image and optionally overlay the owner's nickname at the
-    portrait bottom-left, with automatic white-vs-black text contrast.
-
-    Full-scale decode only. Scaled decodes on this panel trigger the strip
-    artifact, so we never pass a scale argument to jpeg.decode().
-    """
     try:
         import jpegdec
     except ImportError:
@@ -378,7 +417,6 @@ def display_photo(path, nickname=None):
         jpeg.decode()
 
         if nickname:
-            # Portrait bottom-left footer.
             footer_x = 20
             footer_y = PORTRAIT_HEIGHT - 60
             footer_w = PORTRAIT_WIDTH - 40
@@ -389,20 +427,7 @@ def display_photo(path, nickname=None):
             )
             pen = WHITE if is_dark else BLACK
 
-            print(
-                "Nickname footer:",
-                "dark area -> white text"
-                if is_dark else "light area -> black text",
-            )
-
-            text(
-                nickname,
-                footer_x,
-                footer_y,
-                footer_w,
-                2,
-                pen=pen,
-            )
+            text(nickname, footer_x, footer_y, footer_w, 2, pen=pen)
 
         graphics.update()
         gc.collect()
@@ -415,7 +440,7 @@ def display_photo(path, nickname=None):
 
 
 # ---------------------------------------------------------------------------
-# Cache refresh (network-touching, slow interval)
+# Cache refresh
 # ---------------------------------------------------------------------------
 
 def refresh_image_cache(device_id, device_secret):
@@ -438,14 +463,14 @@ def refresh_image_cache(device_id, device_secret):
     server_ids = set(img["id"] for img in server_images)
 
     preferences = data.get("preferences") or {}
-    nicknames   = data.get("nicknames") or {}
-    hidden      = data.get("hidden_users") or []
+    nicknames = data.get("nicknames") or {}
+    hidden = data.get("hidden_users") or []
 
     manifest = load_manifest()
     old_entries = manifest.get("images", [])
 
-    surviving = [entry for entry in old_entries if entry["id"] in server_ids]
-    surviving_ids = set(entry["id"] for entry in surviving)
+    surviving = [e for e in old_entries if e["id"] in server_ids]
+    surviving_ids = set(e["id"] for e in surviving)
 
     for img in server_images:
         img_id = img["id"]
@@ -472,102 +497,62 @@ def refresh_image_cache(device_id, device_secret):
         if entry["id"] not in server_ids:
             try:
                 os.remove(entry["filename"])
-                print("Removed cached image:", entry["id"])
             except Exception:
                 pass
 
     try:
         interval = int(
-            preferences.get(
-                "image_interval_seconds",
-                DEFAULT_IMAGE_DISPLAY_SECONDS,
-            )
+            preferences.get("image_interval_seconds", DEFAULT_IMAGE_DISPLAY_SECONDS)
         )
     except Exception:
         interval = DEFAULT_IMAGE_DISPLAY_SECONDS
-    if interval < 5:
-        interval = 5
 
-    new_manifest = {
+    if interval < MIN_DISPLAY_INTERVAL_SECONDS:
+        interval = MIN_DISPLAY_INTERVAL_SECONDS
+
+    save_manifest({
         "images": surviving,
-        "last_refresh": time.time(),
         "preferences": {
             "image_interval_seconds": interval,
             "show_own_image": bool(preferences.get("show_own_image", True)),
         },
         "nicknames": nicknames,
         "hidden_users": hidden,
-    }
-    save_manifest(new_manifest)
+    })
 
-    print(
-        "Cache refresh complete:",
-        len(surviving),
-        "image(s), interval =",
-        interval,
-        "s,",
-        len(nicknames),
-        "nickname(s),",
-        len(hidden),
-        "hidden user(s)",
-    )
+    print("Cache refresh complete:", len(surviving), "image(s)")
     return len(surviving)
-
-
-# ---------------------------------------------------------------------------
-# Claim flow
-# ---------------------------------------------------------------------------
-
-def wait_for_claim(device_id, device_secret):
-    last_code = None
-
-    while True:
-        status, data, err = post_json(
-            DEVICE_STATUS_URL,
-            {"device_id": device_id, "device_secret": device_secret},
-        )
-
-        if err is not None or status != 200 or not isinstance(data, dict):
-            print("device-status failed:", status, err, data)
-            show_status(
-                "Server unavailable",
-                ["Retrying in 10 seconds..."],
-            )
-            time.sleep(10)
-            continue
-
-        if data.get("claimed") is True:
-            print("Device is claimed.")
-            return True
-
-        claim_code = data.get("claim_code")
-        if claim_code and claim_code != last_code:
-            last_code = claim_code
-            print("Claim code:", claim_code)
-            show_claim_code(claim_code)
-
-        time.sleep(CLAIM_POLL_SECONDS)
-
 
 # ---------------------------------------------------------------------------
 # Wi-Fi
 # ---------------------------------------------------------------------------
 
 def ensure_wifi():
+    """Connect to saved Wi-Fi, running provisioning only if no config exists.
+
+    Returns True on success, False otherwise. Unlike the original version,
+    a transient connection failure on a saved network does NOT trigger
+    reprovisioning - that would leave the device stuck in AP mode and
+    drain the battery. The caller sleeps and retries on the next wake.
+
+    Full provisioning (access point + setup screen) only runs when there
+    is no saved config at all, which is the one-time first-boot case.
+    """
     config = load_config()
-    if config and connect_wifi(config[0], config[1]):
-        return True
 
     if config:
-        remove_config()
+        if connect_wifi(config[0], config[1]):
+            return True
+        print("Saved Wi-Fi failed to connect; will retry next wake")
+        return False
 
+    # No saved config - run the full setup flow (blocking).
     while True:
         ssid, password = provisioning()
         if connect_wifi(ssid, password):
             save_config(ssid, password)
             return True
 
-        remove_config()
         show_status(
             "Wi-Fi failed",
             [
@@ -579,91 +564,186 @@ def ensure_wifi():
         )
         time.sleep(5)
         gc.collect()
-
-
 # ---------------------------------------------------------------------------
-# Entry point
+# Main
 # ---------------------------------------------------------------------------
 
 def main():
     print("TimePlace starting")
 
-    ensure_wifi()
-    print("Wi-Fi connected")
-
     if not mount_sd():
-        show_status(
-            "Storage error",
-            ["Could not mount the SD card."],
-        )
-        raise RuntimeError("SD card not available")
+        show_status("Storage error", ["Could not mount the SD card."])
+        inky_frame.sleep_for(1)
+        return
+
     ensure_cache_dir()
 
-    device_id, device_secret = load_or_create_device_identity()
-    print("device_id:", device_id)
-
-    show_status("Starting up...", ["Checking pairing status..."])
-    wait_for_claim(device_id, device_secret)
-
-    result = refresh_image_cache(device_id, device_secret)
-    if result is None:
-        wait_for_claim(device_id, device_secret)
-        refresh_image_cache(device_id, device_secret)
-
+    state = load_state()
     manifest = load_manifest()
-    last_refresh = manifest.get("last_refresh", 0)
-    index = 0
+    device_id, device_secret = load_or_create_device_identity()
 
-    while True:
-        # Refresh cache on a slow interval.
-        if time.time() - last_refresh >= IMAGE_REFRESH_SECONDS:
+    print("device_id:", device_id)
+    print("wake_count:", state.get("wake_count", 0))
+
+    # -------------------------------------------------------------------
+    # Claim mode
+    # -------------------------------------------------------------------
+    if not state.get("is_claimed"):
+        if not ensure_wifi():
+            token = "error:wifi"
+            if state.get("last_displayed") != token:
+                if state.get("shown_claim_code"):
+                    show_claim_code(state["shown_claim_code"])
+                else:
+                    show_status("No WiFi", ["Retrying shortly..."])
+                state["last_displayed"] = token
+                save_state(state)
+            inky_frame.sleep_for(1)
+            return
+
+        status, data, err = post_json(
+            DEVICE_STATUS_URL,
+            {"device_id": device_id, "device_secret": device_secret},
+        )
+
+        if err is not None or status != 200 or not isinstance(data, dict):
+            print("device-status failed:", status, err)
+            turn_off_wifi()
+            token = "error:status"
+            if state.get("last_displayed") != token:
+                if state.get("shown_claim_code"):
+                    show_claim_code(state["shown_claim_code"])
+                else:
+                    show_status("Server unavailable", ["Retrying shortly..."])
+                state["last_displayed"] = token
+                save_state(state)
+            inky_frame.sleep_for(1)
+            return
+
+        if data.get("claimed") is True:
+            print("Device is claimed.")
+            state["is_claimed"] = True
+            state["force_refresh"] = True
+            state["last_displayed"] = ""
+            save_state(state)
+            # Fall through to display mode; WiFi is still connected.
+        else:
+            code = data.get("claim_code", "")
+            token = "claim:" + code
+            if code and state.get("last_displayed") != token:
+                show_claim_code(code)
+                state["last_displayed"] = token
+                state["shown_claim_code"] = code
+                save_state(state)
+            turn_off_wifi()
+            inky_frame.sleep_for(1)
+            return
+
+    # -------------------------------------------------------------------
+    # Display mode
+    # -------------------------------------------------------------------
+    state["wake_count"] = state.get("wake_count", 0) + 1
+
+    interval = manifest.get("preferences", {}).get(
+        "image_interval_seconds", DEFAULT_IMAGE_DISPLAY_SECONDS
+    )
+    if interval < MIN_DISPLAY_INTERVAL_SECONDS:
+        interval = MIN_DISPLAY_INTERVAL_SECONDS
+
+    sleep_minutes = (interval + 59) // 60
+    actual_sleep_seconds = sleep_minutes * 60
+
+    # -------------------------------------------------------------------
+    # Refresh if due
+    # -------------------------------------------------------------------
+    if state.get("force_refresh") or state["seconds_since_refresh"] >= IMAGE_REFRESH_SECONDS:
+        print("Refreshing cache (WiFi on)...")
+        if ensure_wifi():
             result = refresh_image_cache(device_id, device_secret)
+            turn_off_wifi()
 
             if result is None:
-                wait_for_claim(device_id, device_secret)
-                refresh_image_cache(device_id, device_secret)
+                print("Device became unclaimed.")
+                state["is_claimed"] = False
+                state["shown_claim_code"] = ""
+                state["last_displayed"] = ""
+                save_state(state)
+                inky_frame.sleep_for(1)
+                return
 
             manifest = load_manifest()
-            last_refresh = manifest.get("last_refresh", 0)
-            index = 0
+            state["seconds_since_refresh"] = 0
+            state["force_refresh"] = False
+            state["image_index"] = 0
+        else:
+            print("WiFi failed, will retry next wake")
+            turn_off_wifi()
+            if not manifest.get("images"):
+                token = "status:nowifi"
+                if state.get("last_displayed") != token:
+                    show_status("No WiFi", ["Retrying shortly..."])
+                    state["last_displayed"] = token
+                save_state(state)
+                inky_frame.sleep_for(1)
+                return
+    else:
+        # WiFi should be off. Make sure.
+        turn_off_wifi()
 
-        images = manifest.get("images", [])
+    # -------------------------------------------------------------------
+    # Show next image
+    # -------------------------------------------------------------------
+    images = manifest.get("images", [])
+    hidden = set(manifest.get("hidden_users", []))
 
-        if not images:
-            show_status(
-                "No photos yet",
-                [
-                    "Add photos in the app",
-                    "to see them here.",
-                    "",
-                    "Checking again soon...",
-                ],
-            )
-            time.sleep(60)
-            last_refresh = 0
+    if not images:
+        token = "status:nophotos"
+        if state.get("last_displayed") != token:
+            show_status("No photos yet", [
+                "Add photos in the app",
+                "to see them here.",
+            ])
+            state["last_displayed"] = token
+        state["force_refresh"] = True
+        state["seconds_since_refresh"] = 0
+        save_state(state)
+        inky_frame.sleep_for(1)
+        return
+
+    shown = False
+    for _ in range(len(images)):
+        idx = state["image_index"] % len(images)
+        entry = images[idx]
+        state["image_index"] = (idx + 1) % len(images)
+
+        if entry.get("user_id") in hidden:
             continue
 
-        entry = images[index % len(images)]
-        index = (index + 1) % len(images)
+        token = "image:" + entry["id"]
+        nickname = manifest.get("nicknames", {}).get(entry.get("user_id"))
 
-        owner_id = entry.get("user_id")
-        nicknames = manifest.get("nicknames", {})
-        hidden_users = set(manifest.get("hidden_users", []))
+        if state.get("last_displayed") != token:
+            display_photo(entry["filename"], nickname=nickname)
+            state["last_displayed"] = token
+        else:
+            print("Same image already on screen, skipping redraw")
+        shown = True
+        break
 
-        # Defence in depth: the server already filters, but skip locally
-        # if the manifest is stale relative to a fresh hide.
-        if owner_id in hidden_users:
-            continue
+    if not shown:
+        token = "status:allhidden"
+        if state.get("last_displayed") != token:
+            show_status("No photos", ["All photos hidden."])
+            state["last_displayed"] = token
 
-        nickname = nicknames.get(owner_id)
+    # Accumulate time and save before sleeping
+    state["seconds_since_refresh"] += actual_sleep_seconds
+    save_state(state)
 
-        display_photo(entry["filename"], nickname=nickname)
+    turn_off_wifi()
 
-        interval = manifest.get("preferences", {}).get(
-            "image_interval_seconds",
-            DEFAULT_IMAGE_DISPLAY_SECONDS,
-        )
-        time.sleep(interval)
+    print("Sleeping", sleep_minutes, "minute(s)")
+    inky_frame.sleep_for(sleep_minutes)
 
 
 if __name__ == "__main__":
