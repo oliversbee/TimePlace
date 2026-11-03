@@ -15,57 +15,54 @@ struct PostPreviewView: View {
     @State private var isUploading = false
     @State private var errorMessage: String?
 
+    // Unified corner radius for the main image, PiP, and buttons
+    private let uniformCornerRadius: CGFloat = 24
+
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.black
-                    .ignoresSafeArea()
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    
-                    // Top spacer to balance the layout and clear the status bar
-                    Spacer(minLength: max(geometry.safeAreaInsets.top, 20))
-                    
-                    // Error Banner
-                    if let errorMessage {
-                        GlassStatusBanner(text: errorMessage)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 16)
-                    }
-
-                    // =========================================================
-                    // IMAGE PREVIEW AREA
-                    // =========================================================
-                    ZStack(alignment: .bottomTrailing) {
-                        
-                        // Main Image
-                        Image(uiImage: mainImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-                        
-                        // Secondary PiP Image
-                        if let secondaryImage {
-                            secondaryImageView(image: secondaryImage)
-                        }
-                    }
-                    // Constrain the image to a 3:4 portrait aspect ratio so it acts like a card
-                    .aspectRatio(3/4, contentMode: .fit)
-                    .padding(.horizontal, 24)
-                    
-                    // Spacer between image and buttons
-                    Spacer(minLength: 24)
-                    
-                    // =========================================================
-                    // BOTTOM CONTROLS
-                    // =========================================================
-                    controls
-                        .padding(.horizontal, 24)
-                    
-                    // Bottom spacer to balance the layout
-                    Spacer(minLength: max(geometry.safeAreaInsets.bottom, 20))
+            VStack(spacing: 0) {
+                
+                // Error Banner (kept at the top if needed)
+                if let errorMessage {
+                    GlassStatusBanner(text: errorMessage)
+                        .padding(.top, 10)
+                        .padding(.horizontal, 16)
                 }
+
+                // =========================================================
+                // IMAGE PREVIEW AREA
+                // =========================================================
+                ZStack(alignment: .bottomTrailing) {
+                    
+                    // Main Image
+                    Image(uiImage: mainImage)
+                        .resizable()
+                        .scaledToFill()
+                        // Allow the image to expand to fill available vertical space
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous))
+                    
+                    // Secondary PiP Image
+                    if let secondaryImage {
+                        secondaryImageView(image: secondaryImage)
+                    }
+                }
+                // Reduced horizontal padding to make the image larger
+                .padding(.horizontal, 16)
+                // Reduced top padding to push the image higher
+                .padding(.top, 40)
+                
+                Spacer(minLength: 20)
+                
+                // =========================================================
+                // BOTTOM CONTROLS
+                // =========================================================
+                controls
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 30)
             }
         }
     }
@@ -87,14 +84,15 @@ struct PostPreviewView: View {
 
         return Image(uiImage: image)
             .resizable()
-            .scaledToFill() // Fill the frame to avoid letterboxing
+            .scaledToFill()
             .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            // Use the uniform corner radius
+            .clipShape(RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous)
                     .stroke(.white, lineWidth: 3.5)
             )
-            .padding(20) // Keeps the PiP inset from the edges of the main image card
+            .padding(20) 
     }
 
     // =====================================================================
@@ -116,7 +114,8 @@ struct PostPreviewView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .background(Color(white: 0.12))
-                .clipShape(Capsule())
+                // Changed from Capsule to match the image's corner radius
+                .clipShape(RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous))
             }
             .disabled(isUploading)
             .opacity(isUploading ? 0.5 : 1.0)
@@ -151,7 +150,8 @@ struct PostPreviewView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .clipShape(Capsule())
+                // Changed from Capsule to match the image's corner radius
+                .clipShape(RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous))
             }
             .disabled(isUploading)
             .opacity(isUploading ? 0.8 : 1.0)
