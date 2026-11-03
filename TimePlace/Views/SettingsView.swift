@@ -12,92 +12,134 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                // MARK: - Default Options
+                // MARK: - Household Section
                 Section {
+                    // Household Row
                     NavigationLink {
                         HouseholdsSettingsView()
                             .environmentObject(auth)
                             .environmentObject(householdManager)
                     } label: {
-                        Label("Households", systemImage: "house")
+                        HStack {
+                            SettingsIcon(systemName: "house.fill", color: .green)
+                            Text("Elm Street House")
+                            Spacer()
+                            Text("4")
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    
+                    // Members Row
+                    NavigationLink {
+                        // Placeholder for Members view if you add one later
+                        HouseholdsSettingsView()
+                            .environmentObject(auth)
+                            .environmentObject(householdManager)
+                    } label: {
+                        HStack {
+                            SettingsIcon(systemName: "person.2.fill", color: .purple)
+                            Text("Members")
+                        }
+                    }
+                    
+                    // Add Household Button
+                    Button {
+                        // Action to add household
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 28) // Aligns with icons
+                            Text("Add Household")
+                        }
+                        .foregroundColor(.blue)
+                    }
+                } header: {
+                    Text("HOUSEHOLD")
                 }
 
-                // MARK: - Frame Option (Only if claimed)
+                // MARK: - Frame Section (Only if device is claimed)
                 if !householdManager.pairedDevices.isEmpty {
                     Section {
-                        NavigationLink {
-                            DevicesSettingsView()
-                                .environmentObject(auth)
-                                .environmentObject(householdManager)
-                                .environmentObject(settingsViewModel)
-                        } label: {
-                            Label("Frame", systemImage: "display")
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-            }
-            // MARK: - Bottom Actions (Add Frame & Sign Out)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 0) {
-                    Divider()
-                    
-                    // Native-looking list container for bottom buttons
-                    VStack(spacing: 0) {
-                        // Show "Add Frame" only if no devices are claimed
-                        if householdManager.pairedDevices.isEmpty {
-                            Button {
-                                showAddFrameSheet = true
+                        if let device = householdManager.pairedDevices.first {
+                            NavigationLink {
+                                DevicesSettingsView()
+                                    .environmentObject(auth)
+                                    .environmentObject(householdManager)
+                                    .environmentObject(settingsViewModel)
                             } label: {
                                 HStack {
-                                    Label("Add Frame", systemImage: "plus.circle")
+                                    SettingsIcon(systemName: "checkmark", color: .orange)
+                                    Text(device.name.isEmpty ? "Living Room" : device.name)
                                     Spacer()
+                                    Text("Selected")
+                                        .foregroundColor(.secondary)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
-                            
-                            Divider()
-                                .padding(.leading, 16)
                         }
                         
-                        // Sign Out Button
-                        Button(role: .destructive) {
-                            Task {
-                                await auth.signOut()
-                            }
+                        Button {
+                            showAddFrameSheet = true
                         } label: {
                             HStack {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                                Spacer()
+                                Image(systemName: "plus")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 28)
+                                Text("Add Frame")
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .contentShape(Rectangle())
+                            .foregroundColor(.blue)
                         }
-                        .buttonStyle(.plain)
+                    } header: {
+                        Text("FRAME")
                     }
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding(.horizontal, 16)
-                    .padding(.top, 20)
-                    .padding(.bottom, 8)
+                } else {
+                    // If no device is claimed, show Add Frame just above Sign Out
+                    Section {
+                        Button {
+                            showAddFrameSheet = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 28)
+                                Text("Add Frame")
+                            }
+                            .foregroundColor(.blue)
+                        }
+                    }
                 }
-                .background(Color(UIColor.systemGroupedBackground))
+                
+                // MARK: - Sign Out Section
+                Section {
+                    Button(role: .destructive) {
+                        Task {
+                            await auth.signOut()
+                        }
+                    } label: {
+                        Text("Sign Out")
+                            .fontWeight(.regular)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 17, weight: .semibold))
+                            Text("Back")
+                        }
+                    }
+                }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light) // Forces the light mode look from your mockup
         .sheet(isPresented: $showAddFrameSheet) {
             AddFrameView()
                 .environmentObject(householdManager)
@@ -125,6 +167,23 @@ struct SettingsView: View {
                 await householdManager.fetchPairedDevices()
             }
         }
+    }
+}
+
+// =========================================================================
+// HELPER: SETTINGS ICON STYLE
+// =========================================================================
+struct SettingsIcon: View {
+    let systemName: String
+    let color: Color
+    
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .bold))
+            .foregroundColor(.white)
+            .frame(width: 28, height: 28)
+            .background(color)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 
@@ -179,6 +238,6 @@ struct AddFrameView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }
