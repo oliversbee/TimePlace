@@ -33,12 +33,6 @@ struct CameraCaptureView: View {
                     // =================================================
                     // BACK CAMERA
                     // =================================================
-                    //
-                    // There is exactly ONE view per preview layer, and
-                    // it never gives its layer up. Swapping main/PiP
-                    // only changes the frame and position below, so a
-                    // preview can never be orphaned and go black.
-                    //
                     CameraPreview(
                         previewLayer: camera.backPreviewLayer
                     )
@@ -60,7 +54,6 @@ struct CameraCaptureView: View {
                     // =================================================
                     // FRONT CAMERA
                     // =================================================
-
                     CameraPreview(
                         previewLayer: camera.frontPreviewLayer
                     )
@@ -86,13 +79,7 @@ struct CameraCaptureView: View {
             // =========================================================
             // SCREEN FLASH
             // =========================================================
-            //
-            // The front camera has no lamp, so the screen becomes one.
-            // Sits above everything, including the controls, and is
-            // never animated — it has to be at full white immediately.
-            //
             if camera.isScreenFlashing {
-
                 Color.white
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -127,8 +114,6 @@ struct CameraCaptureView: View {
 
         let photoOutputs = session.outputs.compactMap { $0 as? AVCapturePhotoOutput }
 
-        // If this is a multi-camera session, match the photo output to the
-        // preview layer's input port so front and back use the right dimensions.
         let matchingOutput = photoOutputs.first { output in
             guard let outputConnection = output.connection(with: .video) else {
                 return false
@@ -161,12 +146,9 @@ struct CameraCaptureView: View {
             }
         }
 
-        // Safe fallback if the output does not expose still-photo dimensions.
         return maximumSize
     }
 
-    /// Mirrors the sizing calculation in PostPreviewView: preserve the source
-    /// aspect ratio, with a maximum width of 120 and height of 160 points.
     private func fittedPiPSize(for sourceSize: CGSize) -> CGSize {
 
         guard sourceSize.width > 0, sourceSize.height > 0 else {
@@ -181,7 +163,6 @@ struct CameraCaptureView: View {
     }
 
     private var flashIcon: String {
-
         switch camera.flashMode {
         case .off:  return "bolt.slash.fill"
         case .on:   return "bolt.fill"
@@ -200,10 +181,6 @@ struct CameraCaptureView: View {
             // =========================================================
             // TOP BAR
             // =========================================================
-            //
-            // Using a ZStack to perfectly center the toggle while keeping
-            // the settings and flash buttons on the edges.
-            //
             ZStack(alignment: .center) {
                 
                 HStack {
@@ -227,7 +204,6 @@ struct CameraCaptureView: View {
             .padding(.top, 50)
 
             if let error = camera.errorMessage {
-
                 GlassStatusBanner(text: error)
                     .padding(.top, 12)
             }
@@ -237,10 +213,6 @@ struct CameraCaptureView: View {
             // =========================================================
             // BOTTOM BAR
             // =========================================================
-            //
-            // Using a ZStack to perfectly center the shutter while keeping
-            // the camera-flip button on the right.
-            //
             ZStack(alignment: .center) {
                 
                 HStack {
@@ -274,9 +246,7 @@ struct CameraCaptureView: View {
 }
 
 private struct ShutterPressStyle: ButtonStyle {
-
     func makeBody(configuration: Configuration) -> some View {
-
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.9 : 1)
     }
@@ -285,12 +255,6 @@ private struct ShutterPressStyle: ButtonStyle {
 // =========================================================================
 // PREVIEW SLOT
 // =========================================================================
-//
-// One modifier, applied unconditionally, whose VALUES change. This is
-// deliberate: an `if isMain { ... } else { ... }` around the preview would
-// give SwiftUI two different view identities, tear the UIView down and
-// rebuild it, and put you right back in black-preview territory.
-//
 private struct PreviewSlot: ViewModifier {
 
     let isMain: Bool
@@ -306,7 +270,6 @@ private struct PreviewSlot: ViewModifier {
     }
 
     private var center: CGPoint {
-
         if isMain {
             return CGPoint(
                 x: container.width / 2,
@@ -321,25 +284,24 @@ private struct PreviewSlot: ViewModifier {
     }
 
     private var cornerRadius: CGFloat {
-        // Increased to 20 to match the rounded look of the PiP in the image
-        isMain ? 0 : 20
+        // Unified corner radius to match the UI
+        isMain ? 0 : 24
     }
 
     func body(content: Content) -> some View {
-
         content
             .frame(
                 width: max(size.width, 1),
                 height: max(size.height, 1)
             )
             .clipShape(
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
                         .white,
-                        lineWidth: isMain ? 0 : 3.5 // Slightly thicker border to match image
+                        lineWidth: isMain ? 0 : 3.5
                     )
             )
             .shadow(radius: isMain ? 0 : 6)
@@ -351,5 +313,51 @@ private struct PreviewSlot: ViewModifier {
                 onTapWhenPiP()
             }
             .transaction { $0.animation = nil }
+    }
+}
+
+// =========================================================================
+// CAPTURE MODE TOGGLE (Updated Corner Radius)
+// =========================================================================
+struct CaptureModeToggle: View {
+    @Binding var mode: CameraManager.CaptureMode
+    
+    // Matching the 24 corner radius from PostPreviewView
+    private let cornerRadius: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // One Mode Button
+            toggleButton(title: "One", icon: "square", isSelected: mode == .one) {
+                mode = .one
+            }
+            
+            // Both Mode Button
+            toggleButton(title: "Both", icon: "square.split.2x1", isSelected: mode == .both) {
+                mode = .both
+            }
+        }
+        .padding(4)
+        // Dark background mimicking the glass pill in the UI
+        .background(Color(white: 0.15).opacity(0.8))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private func toggleButton(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(isSelected ? .black : .white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            // Selected state background pill matching the corner radius
+            .background(isSelected ? Color.white : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
