@@ -8,60 +8,70 @@ struct SettingsView: View {
     @StateObject private var householdManager = HouseholdManager()
     
     @State private var showAddFrameSheet = false
+    @State private var showAddHouseholdAlert = false
+    @State private var newHouseholdName = ""
 
     var body: some View {
         NavigationStack {
             List {
                 // MARK: - Household Section
                 Section {
-                    // Household Row
-                    NavigationLink {
-                        HouseholdsSettingsView()
-                            .environmentObject(auth)
-                            .environmentObject(householdManager)
-                    } label: {
-                        HStack {
-                            SettingsIcon(systemName: "house.fill", color: .green)
-                            Text("Elm Street House")
-                            Spacer()
-                            Text("4")
-                                .foregroundColor(.secondary)
+                    if householdManager.households.isEmpty && !householdManager.isLoading {
+                        Text("No households joined yet.")
+                            .foregroundColor(.secondary)
+                    } else {
+                        // Show up to 3 households
+                        ForEach(householdManager.households.prefix(3)) { h in
+                            NavigationLink {
+                                HouseholdMembersView(
+                                    household: h,
+                                    manager: householdManager
+                                )
+                            } label: {
+                                HStack {
+                                    SettingsIcon(systemName: "house.fill", color: .green)
+                                    Text(h.name)
+                                }
+                            }
                         }
-                    }
-                    
-                    // Members Row
-                    NavigationLink {
-                        // Placeholder for Members view if you add one later
-                        HouseholdsSettingsView()
-                            .environmentObject(auth)
-                            .environmentObject(householdManager)
-                    } label: {
-                        HStack {
-                            SettingsIcon(systemName: "person.2.fill", color: .purple)
-                            Text("Members")
+                        
+                        // View All Option (only if > 3)
+                        if householdManager.households.count > 3 {
+                            NavigationLink {
+                                HouseholdsSettingsView()
+                                    .environmentObject(auth)
+                                    .environmentObject(householdManager)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .frame(width: 28) // Aligns with icons
+                                    Text("View All Households")
+                                }
+                            }
                         }
-                    }
-                    
-                    // Add Household Button
-                    Button {
-                        // Action to add household
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 28) // Aligns with icons
-                            Text("Add Household")
+                        
+                        // Add Household Button
+                        Button {
+                            showAddHouseholdAlert = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(width: 28) // Aligns with icons
+                                Text("Add Household")
+                            }
+                            .foregroundColor(.blue)
                         }
-                        .foregroundColor(.blue)
                     }
                 } header: {
                     Text("HOUSEHOLD")
                 }
 
-                // MARK: - Frame Section (Only if device is claimed)
+                // MARK: - Frame Section
                 if !householdManager.pairedDevices.isEmpty {
                     Section {
-                        if let device = householdManager.pairedDevices.first {
+                        ForEach(householdManager.pairedDevices) { device in
                             NavigationLink {
                                 DevicesSettingsView()
                                     .environmentObject(auth)
@@ -70,10 +80,8 @@ struct SettingsView: View {
                             } label: {
                                 HStack {
                                     SettingsIcon(systemName: "checkmark", color: .orange)
-                                    Text(device.name.isEmpty ? "Living Room" : device.name)
+                                    Text(device.name.isEmpty ? "My Frame" : device.name)
                                     Spacer()
-                                    Text("Selected")
-                                        .foregroundColor(.secondary)
                                 }
                             }
                         }
@@ -139,10 +147,26 @@ struct SettingsView: View {
                 }
             }
         }
-        .preferredColorScheme(.light) // Forces the light mode look from your mockup
+        .preferredColorScheme(.light) 
         .sheet(isPresented: $showAddFrameSheet) {
             AddFrameView()
                 .environmentObject(householdManager)
+        }
+        .alert("Add Household", isPresented: $showAddHouseholdAlert) {
+            TextField("Household Name", text: $newHouseholdName)
+            Button("Cancel", role: .cancel) {
+                newHouseholdName = ""
+            }
+            Button("Create") {
+                Task {
+                    if await householdManager.createHousehold(name: newHouseholdName) {
+                        newHouseholdName = ""
+                    }
+                }
+            }
+            .disabled(newHouseholdName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter a name for your new household.")
         }
         .task {
             await preloadSettings()
