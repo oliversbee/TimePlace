@@ -113,13 +113,13 @@ struct UploadSuccessCard: View {
     var body: some View {
         ZStack {
             // Dimmed background to keep focus on the card while still seeing the camera
-            Color.black.opacity(0.4)
+            Color.black.opacity(0.2)
                 .ignoresSafeArea()
                 .onTapGesture {
                     onDismiss()
                 }
             
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 // Green Checkmark
                 ZStack {
                     Circle()
@@ -131,25 +131,20 @@ struct UploadSuccessCard: View {
                         .foregroundColor(.white)
                 }
                 
-                // Text
-                VStack(spacing: 8) {
-                    Text("Upload Complete")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text("Your photo is on the Living Room frame")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
+                // Text (Single line)
+                Text("Upload Complete")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
             }
             .padding(.vertical, 32)
             .padding(.horizontal, 24)
-            // Frosted glass effect
+            // More transparent, frosted glass effect
             .background(.ultraThinMaterial)
-            .environment(\.colorScheme, .dark) // Forces dark mode aesthetic for the material
+            .background(Color.black.opacity(0.2)) // Slight dark tint for contrast
+            .environment(\.colorScheme, .dark) 
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .padding(.horizontal, 40)
+            // Wider card by reducing horizontal padding
+            .padding(.horizontal, 24)
             .onTapGesture {
                 onDismiss()
             }
