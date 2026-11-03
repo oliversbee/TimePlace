@@ -6,6 +6,9 @@ struct CaptureHomeView: View {
     @StateObject private var camera = CameraManager()
     @State private var showPreview = false
     @State private var showSettings = false
+    
+    // State to control the success card
+    @State private var showUploadSuccess = false
 
     var body: some View {
         ZStack {
@@ -14,10 +17,44 @@ struct CaptureHomeView: View {
 
             cameraContent
                 .ignoresSafeArea()
+            
+            // =========================================================
+            // UPLOAD SUCCESS OVERLAY
+            // =========================================================
+            if showUploadSuccess {
+                UploadSuccessCard {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showUploadSuccess = false
+                    }
+                }
+                .zIndex(10) // Ensures it sits above the camera view
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: 40)),
+                        removal: .opacity.combined(with: .scale(scale: 0.95))
+                    )
+                )
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(auth)
+        }
+        // Listens for changes to trigger the auto-dismiss timer
+        .onChange(of: showUploadSuccess) { isShowing in
+            if isShowing {
+                Task {
+                    // Wait 3 seconds
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    
+                    // Dismiss if still showing
+                    await MainActor.run {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showUploadSuccess = false
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -48,12 +85,73 @@ struct CaptureHomeView: View {
                     },
 
                     onUploaded: {
+                        // 1. Clear the images
                         camera.capturedMainImage = nil
                         camera.capturedSecondaryImage = nil
+                        
+                        // 2. Dismiss the preview full screen cover
                         showPreview = false
+                        
+                        // 3. Trigger the success card overlay
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showUploadSuccess = true
+                        }
                     }
                 )
                 .environmentObject(auth)
+            }
+        }
+    }
+}
+
+// =========================================================================
+// UPLOAD SUCCESS CARD
+// =========================================================================
+struct UploadSuccessCard: View {
+    var onDismiss: () -> Void
+    
+    var body: some View {
+        ZStack {
+            // Dimmed background to keep focus on the card while still seeing the camera
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    onDismiss()
+                }
+            
+            VStack(spacing: 16) {
+                // Green Checkmark
+                ZStack {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                
+                // Text
+                VStack(spacing: 8) {
+                    Text("Upload Complete")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Your photo is on the Living Room frame")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.vertical, 32)
+            .padding(.horizontal, 24)
+            // Frosted glass effect
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark) // Forces dark mode aesthetic for the material
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(.horizontal, 40)
+            .onTapGesture {
+                onDismiss()
             }
         }
     }
