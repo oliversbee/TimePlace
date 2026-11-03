@@ -7,8 +7,14 @@ struct SettingsView: View {
     @StateObject private var settingsViewModel = SettingsViewModel()
     @StateObject private var householdManager = HouseholdManager()
     
+    // Sheet for Frame pairing
     @State private var showAddFrameSheet = false
-    @State private var showAddHouseholdAlert = false
+    
+    // Alerts for Household logic
+    @State private var showJoinHouseholdAlert = false
+    @State private var joinCode = ""
+    
+    @State private var showCreateHouseholdAlert = false
     @State private var newHouseholdName = ""
 
     var body: some View {
@@ -50,19 +56,32 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        
-                        // Add Household Button
-                        Button {
-                            showAddHouseholdAlert = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .frame(width: 28) // Aligns with icons
-                                Text("Add Household")
-                            }
-                            .foregroundColor(.blue)
+                    }
+                    
+                    // Join Household Button
+                    Button {
+                        showJoinHouseholdAlert = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.plus")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 28) // Aligns with icons
+                            Text("Join Household")
                         }
+                        .foregroundColor(.blue)
+                    }
+                    
+                    // Create Household Button
+                    Button {
+                        showCreateHouseholdAlert = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 28) // Aligns with icons
+                            Text("Create Household")
+                        }
+                        .foregroundColor(.blue)
                     }
                 } header: {
                     Text("HOUSEHOLD")
@@ -152,8 +171,29 @@ struct SettingsView: View {
             AddFrameView()
                 .environmentObject(householdManager)
         }
-        .alert("Add Household", isPresented: $showAddHouseholdAlert) {
+        // MARK: - Join Household Alert
+        .alert("Join Household", isPresented: $showJoinHouseholdAlert) {
+            TextField("6-character code", text: $joinCode)
+                .textInputAutocapitalization(.characters)
+            
+            Button("Cancel", role: .cancel) {
+                joinCode = ""
+            }
+            Button("Join") {
+                Task {
+                    if await householdManager.joinHousehold(code: joinCode) {
+                        joinCode = ""
+                    }
+                }
+            }
+            .disabled(joinCode.count < 6)
+        } message: {
+            Text("Enter the 6-character join code for the household.")
+        }
+        // MARK: - Create Household Alert
+        .alert("Create Household", isPresented: $showCreateHouseholdAlert) {
             TextField("Household Name", text: $newHouseholdName)
+            
             Button("Cancel", role: .cancel) {
                 newHouseholdName = ""
             }
