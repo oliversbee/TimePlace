@@ -48,44 +48,53 @@ struct SettingsView: View {
             }
             // MARK: - Bottom Actions (Add Frame & Sign Out)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 12) {
-                    // Show "Add Frame" only if no devices are claimed
-                    if householdManager.pairedDevices.isEmpty {
-                        Button {
-                            showAddFrameSheet = true
+                VStack(spacing: 0) {
+                    Divider()
+                    
+                    // Native-looking list container for bottom buttons
+                    VStack(spacing: 0) {
+                        // Show "Add Frame" only if no devices are claimed
+                        if householdManager.pairedDevices.isEmpty {
+                            Button {
+                                showAddFrameSheet = true
+                            } label: {
+                                HStack {
+                                    Label("Add Frame", systemImage: "plus.circle")
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Divider()
+                                .padding(.leading, 16)
+                        }
+                        
+                        // Sign Out Button
+                        Button(role: .destructive) {
+                            Task {
+                                await auth.signOut()
+                            }
                         } label: {
                             HStack {
-                                Image(systemName: "plus.circle")
-                                Text("Add Frame")
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                Spacer()
                             }
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
                         }
-                        .tint(.blue)
+                        .buttonStyle(.plain)
                     }
-
-                    // Sign Out Button
-                    Button(role: .destructive) {
-                        Task {
-                            await auth.signOut()
-                        }
-                    } label: {
-                        HStack {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                            Spacer()
-                        }
-                        .padding()
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .padding(.top, 8)
-                .background(Color(UIColor.systemGroupedBackground).opacity(0.95)) // Blends with list
+                .background(Color(UIColor.systemGroupedBackground))
             }
         }
         .preferredColorScheme(.dark)
@@ -120,7 +129,7 @@ struct SettingsView: View {
 }
 
 // =========================================================================
-// ADD FRAME VIEW (Pairing Logic from DevicesSettingsView)
+// ADD FRAME VIEW (Pairing Logic)
 // =========================================================================
 struct AddFrameView: View {
     @EnvironmentObject var manager: HouseholdManager
