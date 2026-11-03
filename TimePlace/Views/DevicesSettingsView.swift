@@ -5,7 +5,6 @@ struct DevicesSettingsView: View {
     @EnvironmentObject var manager: HouseholdManager
     @EnvironmentObject var settingsViewModel: SettingsViewModel
 
-    @State private var deviceClaimCode = ""
     @State private var selectedDevice: PairedDevice?
 
     var body: some View {
@@ -16,9 +15,9 @@ struct DevicesSettingsView: View {
                 }
             }
 
-            Section("My Displays") {
+            Section("My Frames") {
                 if manager.pairedDevices.isEmpty && !manager.isLoading {
-                    Text("No paired displays yet.").foregroundColor(.gray)
+                    Text("No paired frames yet.").foregroundColor(.gray)
                 } else {
                     ForEach(manager.pairedDevices) { device in
                         HStack {
@@ -41,31 +40,8 @@ struct DevicesSettingsView: View {
                     }
                 }
             }
-
-            Section("Pair New Display") {
-                TextField(
-                    "6-character display code",
-                    text: $deviceClaimCode
-                )
-                .textInputAutocapitalization(.characters)
-
-                Button("Link Device") {
-                    Task {
-                        if await manager.pairDevice(
-                            claimCode: deviceClaimCode
-                        ) {
-                            deviceClaimCode = ""
-                            await manager.fetchPairedDevices()
-                        }
-                    }
-                }
-                .disabled(
-                    deviceClaimCode.isEmpty ||
-                    manager.isLoading
-                )
-            }
         }
-        .navigationTitle("Devices")
+        .navigationTitle("Frame")
         .sheet(item: $selectedDevice) { (device: PairedDevice) in
             DisplayConfigView(device: device)
                 .environmentObject(auth)

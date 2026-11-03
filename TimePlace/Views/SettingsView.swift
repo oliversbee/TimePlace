@@ -6,63 +6,33 @@ struct SettingsView: View {
 
     @StateObject private var settingsViewModel = SettingsViewModel()
     @StateObject private var householdManager = HouseholdManager()
+    
+    @State private var showAddFrameSheet = false
 
     var body: some View {
         NavigationStack {
             List {
-                // MARK: - Settings
-
+                // MARK: - Default Options
                 Section {
-                    NavigationLink {
-                        PreferencesSettingsView()
-                            .environmentObject(auth)
-                            .environmentObject(settingsViewModel)
-                    } label: {
-                        Label(
-                            "Preferences",
-                            systemImage: "slider.horizontal.3"
-                        )
-                    }
-
                     NavigationLink {
                         HouseholdsSettingsView()
                             .environmentObject(auth)
                             .environmentObject(householdManager)
                     } label: {
-                        Label(
-                            "Households",
-                            systemImage: "house"
-                        )
-                    }
-
-                    NavigationLink {
-                        DevicesSettingsView()
-                            .environmentObject(auth)
-                            .environmentObject(householdManager)
-                            .environmentObject(settingsViewModel)
-                    } label: {
-                        Label(
-                            "Devices",
-                            systemImage: "display"
-                        )
+                        Label("Households", systemImage: "house")
                     }
                 }
 
-                // MARK: - Account
-
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await auth.signOut()
-                        }
-                    } label: {
-                        HStack {
-                            Label(
-                                "Sign Out",
-                                systemImage: "rectangle.portrait.and.arrow.right"
-                            )
-
-                            Spacer()
+                // MARK: - Frame Option (Only if claimed)
+                if !householdManager.pairedDevices.isEmpty {
+                    Section {
+                        NavigationLink {
+                            DevicesSettingsView()
+                                .environmentObject(auth)
+                                .environmentObject(householdManager)
+                                .environmentObject(settingsViewModel)
+                        } label: {
+                            Label("Frame", systemImage: "display")
                         }
                     }
                 }
@@ -76,8 +46,53 @@ struct SettingsView: View {
                     }
                 }
             }
+            // MARK: - Bottom Actions (Add Frame & Sign Out)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 12) {
+                    // Show "Add Frame" only if no devices are claimed
+                    if householdManager.pairedDevices.isEmpty {
+                        Button {
+                            showAddFrameSheet = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                Text("Add Frame")
+                            }
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .tint(.blue)
+                    }
+
+                    // Sign Out Button
+                    Button(role: .destructive) {
+                        Task {
+                            await auth.signOut()
+                        }
+                    } label: {
+                        HStack {
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .padding(.top, 8)
+                .background(Color(UIColor.systemGroupedBackground).opacity(0.95)) // Blends with list
+            }
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showAddFrameSheet) {
+            AddFrameView()
+                .environmentObject(householdManager)
+        }
         .task {
             await preloadSettings()
         }
@@ -101,5 +116,60 @@ struct SettingsView: View {
                 await householdManager.fetchPairedDevices()
             }
         }
+    }
+}
+
+// =========================================================================
+// ADD FRAME VIEW (Pairing Logic from DevicesSettingsView)
+// =========================================================================
+struct AddFrameView: View {
+    @EnvironmentObject var manager: HouseholdManager
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var deviceClaimCode = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if let error = manager.errorMessage {
+                    Section {
+                        Text(error).foregroundColor(.red)
+                    }
+                }
+                
+                Section(
+                    header: Text("Pair New Frame"),
+                    footer: Text("Enter the 6-character code displayed on your frame.")
+                ) {
+                    TextField(
+                        "6-character display code",
+                        text: $deviceClaimCode
+                    )
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+
+                    Button("Link Device") {
+                        Task {
+                            if await manager.pairDevice(claimCode: deviceClaimCode) {
+                                deviceClaimCode = ""
+                                await manager.fetchPairedDevices()
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(deviceClaimCode.isEmpty || manager.isLoading)
+                }
+            }
+            .navigationTitle("Add Frame")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
     }
 }
