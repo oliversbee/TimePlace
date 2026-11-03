@@ -16,47 +16,56 @@ struct PostPreviewView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        ZStack {
-            Color.black
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                
-                // Error Banner (kept at the top if needed)
-                if let errorMessage {
-                    GlassStatusBanner(text: errorMessage)
-                        .padding(.top, 10)
-                        .padding(.horizontal, 24)
-                }
-
-                // =========================================================
-                // IMAGE PREVIEW AREA
-                // =========================================================
-                ZStack(alignment: .bottomTrailing) {
+                VStack(spacing: 0) {
                     
-                    // Main Image
-                    Image(uiImage: mainImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                    // Top spacer to balance the layout and clear the status bar
+                    Spacer(minLength: max(geometry.safeAreaInsets.top, 20))
                     
-                    // Secondary PiP Image
-                    if let secondaryImage {
-                        secondaryImageView(image: secondaryImage)
+                    // Error Banner
+                    if let errorMessage {
+                        GlassStatusBanner(text: errorMessage)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 16)
                     }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 70) // Clears the status bar / Dynamic Island
-                
-                Spacer()
-                
-                // =========================================================
-                // BOTTOM CONTROLS
-                // =========================================================
-                controls
+
+                    // =========================================================
+                    // IMAGE PREVIEW AREA
+                    // =========================================================
+                    ZStack(alignment: .bottomTrailing) {
+                        
+                        // Main Image
+                        Image(uiImage: mainImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                        
+                        // Secondary PiP Image
+                        if let secondaryImage {
+                            secondaryImageView(image: secondaryImage)
+                        }
+                    }
+                    // Constrain the image to a 3:4 portrait aspect ratio so it acts like a card
+                    .aspectRatio(3/4, contentMode: .fit)
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 40)
+                    
+                    // Spacer between image and buttons
+                    Spacer(minLength: 24)
+                    
+                    // =========================================================
+                    // BOTTOM CONTROLS
+                    // =========================================================
+                    controls
+                        .padding(.horizontal, 24)
+                    
+                    // Bottom spacer to balance the layout
+                    Spacer(minLength: max(geometry.safeAreaInsets.bottom, 20))
+                }
             }
         }
     }
@@ -66,8 +75,8 @@ struct PostPreviewView: View {
     // =====================================================================
 
     private func secondaryImageView(image: UIImage) -> some View {
-        let maxWidth: CGFloat = 130
-        let maxHeight: CGFloat = 170
+        let maxWidth: CGFloat = 120
+        let maxHeight: CGFloat = 160
 
         let imageWidth = image.size.width
         let imageHeight = image.size.height
@@ -78,14 +87,14 @@ struct PostPreviewView: View {
 
         return Image(uiImage: image)
             .resizable()
-            .scaledToFill()
+            .scaledToFill() // Fill the frame to avoid letterboxing
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(.white, lineWidth: 3.5)
             )
-            .padding(24) // Keeps it inset from the edges of the main image
+            .padding(20) // Keeps the PiP inset from the edges of the main image card
     }
 
     // =====================================================================
