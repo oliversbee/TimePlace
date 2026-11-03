@@ -201,28 +201,27 @@ struct CameraCaptureView: View {
             // TOP BAR
             // =========================================================
             //
-            // Settings stays put. Flash moves up here — where the
-            // camera-flip button used to be — next to the mode toggle.
+            // Using a ZStack to perfectly center the toggle while keeping
+            // the settings and flash buttons on the edges.
             //
-            HStack(alignment: .center) {
-
-                GlassIconButton(
-                    systemName: "gearshape.fill",
-                    action: onOpenMenu
-                )
-
-                Spacer()
-
-                HStack(spacing: 10) {
-
-                    CaptureModeToggle(mode: $camera.captureMode)
-
+            ZStack(alignment: .center) {
+                
+                HStack {
+                    GlassIconButton(
+                        systemName: "gearshape.fill",
+                        action: onOpenMenu
+                    )
+                    
+                    Spacer()
+                    
                     GlassIconButton(
                         systemName: flashIcon,
                         tint: camera.flashMode == .off ? .white : .yellow,
                         action: camera.cycleFlashMode
                     )
                 }
+                
+                CaptureModeToggle(mode: $camera.captureMode)
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -239,16 +238,21 @@ struct CameraCaptureView: View {
             // BOTTOM BAR
             // =========================================================
             //
-            // Camera-flip takes flash's old spot, right of the shutter.
-            // The left spacer keeps the shutter visually centered.
+            // Using a ZStack to perfectly center the shutter while keeping
+            // the camera-flip button on the right.
             //
-            HStack {
-
-                Spacer()
-                    .frame(width: 44)
-
-                Spacer()
-
+            ZStack(alignment: .center) {
+                
+                HStack {
+                    Spacer()
+                    
+                    GlassIconButton(
+                        systemName: "arrow.triangle.2.circlepath.camera",
+                        action: camera.swapMain
+                    )
+                }
+                .padding(.horizontal, 20)
+                
                 Button {
                     camera.capturePhoto(completion: onCaptured)
                 } label: {
@@ -258,20 +262,12 @@ struct CameraCaptureView: View {
                         .frame(width: 76, height: 76)
                         .overlay(
                             Circle()
-                                .fill(.white)
+                                .fill(Color(red: 0.94, green: 0.41, blue: 0.33)) // Coral color matching the image
                                 .frame(width: 64, height: 64)
                         )
                 }
                 .buttonStyle(ShutterPressStyle())
-
-                Spacer()
-
-                GlassIconButton(
-                    systemName: "arrow.triangle.2.circlepath.camera",
-                    action: camera.swapMain
-                )
             }
-            .padding(.horizontal, 20)
             .padding(.bottom, 40)
         }
     }
@@ -325,7 +321,8 @@ private struct PreviewSlot: ViewModifier {
     }
 
     private var cornerRadius: CGFloat {
-        isMain ? 0 : 16
+        // Increased to 20 to match the rounded look of the PiP in the image
+        isMain ? 0 : 20
     }
 
     func body(content: Content) -> some View {
@@ -342,7 +339,7 @@ private struct PreviewSlot: ViewModifier {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(
                         .white,
-                        lineWidth: isMain ? 0 : 3
+                        lineWidth: isMain ? 0 : 3.5 // Slightly thicker border to match image
                     )
             )
             .shadow(radius: isMain ? 0 : 6)
