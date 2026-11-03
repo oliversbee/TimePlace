@@ -2,10 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
+    
+    // 1. Changed to EnvironmentObject to use preloaded data
+    @EnvironmentObject var householdManager: HouseholdManager
+    
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var settingsViewModel = SettingsViewModel()
-    @StateObject private var householdManager = HouseholdManager()
     
     // Sheet for Frame pairing
     @State private var showAddFrameSheet = false
@@ -89,6 +92,7 @@ struct SettingsView: View {
 
                 // MARK: - Frame Section
                 if !householdManager.pairedDevices.isEmpty {
+                    // User has a frame: Only show the frame(s), no "Add Frame" option
                     Section {
                         ForEach(householdManager.pairedDevices) { device in
                             NavigationLink {
@@ -104,23 +108,11 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        
-                        Button {
-                            showAddFrameSheet = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .frame(width: 28)
-                                Text("Add Frame")
-                            }
-                            .foregroundColor(.blue)
-                        }
                     } header: {
                         Text("FRAME")
                     }
                 } else {
-                    // If no device is claimed, show Add Frame just above Sign Out
+                    // User has no frame: Show "Add Frame" button
                     Section {
                         Button {
                             showAddFrameSheet = true
@@ -133,19 +125,6 @@ struct SettingsView: View {
                             }
                             .foregroundColor(.blue)
                         }
-                    }
-                }
-                
-                // MARK: - Sign Out Section
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await auth.signOut()
-                        }
-                    } label: {
-                        Text("Sign Out")
-                            .fontWeight(.regular)
-                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
             }
@@ -163,6 +142,25 @@ struct SettingsView: View {
                             Text("Back")
                         }
                     }
+                }
+            }
+            // MARK: - Pinned Sign Out Button
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 0) {
+                    Divider()
+                    Button(role: .destructive) {
+                        Task {
+                            await auth.signOut()
+                        }
+                    } label: {
+                        Text("Sign Out")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding()
+                    .background(Color(UIColor.systemGroupedBackground))
                 }
             }
         }
@@ -208,28 +206,11 @@ struct SettingsView: View {
         } message: {
             Text("Enter a name for your new household.")
         }
+        // Note: Removed the .task modifier here because the data is preloaded in CaptureHomeView
         .task {
-            await preloadSettings()
-        }
-    }
-
-    private func preloadSettings() async {
-        guard let userId = auth.userId else {
-            return
-        }
-
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask {
-                await settingsViewModel.loadData(currentUserId: userId)
-            }
-
-            group.addTask {
-                await householdManager.fetchHouseholds()
-            }
-
-            group.addTask {
-                await householdManager.fetchPairedDevices()
-            }
+            // Optional: Preload settings specific data if needed
+            guard let userId = auth.userId else { return }
+            await settingsViewModel.loadData(currentUserId: userId)
         }
     }
 }

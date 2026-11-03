@@ -5,6 +5,8 @@ struct HouseholdMembersView: View {
     let household: Household
 
     @ObservedObject var manager: HouseholdManager
+    
+    @Environment(\.dismiss) private var dismiss
 
     @State private var members: [HouseholdMember] = []
     @State private var nicknames: [UUID: String] = [:]
@@ -260,5 +262,10 @@ struct HouseholdMembersView: View {
         _ = await manager.leaveHousehold(
             householdId: household.id
         )
+        
+        // Automatically close the window after leaving
+        await MainActor.run {
+            dismiss()
+        }
     }
 }

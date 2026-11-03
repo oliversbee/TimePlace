@@ -4,6 +4,10 @@ struct CaptureHomeView: View {
     @EnvironmentObject var auth: AuthManager
 
     @StateObject private var camera = CameraManager()
+    
+    // 1. Added HouseholdManager here to preload and share
+    @StateObject private var householdManager = HouseholdManager()
+    
     @State private var showPreview = false
     @State private var showSettings = false
     
@@ -39,6 +43,12 @@ struct CaptureHomeView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(auth)
+                // 2. Pass the preloaded manager to Settings
+                .environmentObject(householdManager)
+        }
+        // 3. Preload household and frame data on launch
+        .task {
+            await preloadUserData()
         }
         // Listens for changes to trigger the auto-dismiss timer
         .onChange(of: showUploadSuccess) { isShowing in
@@ -54,6 +64,19 @@ struct CaptureHomeView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    private func preloadUserData() async {
+        guard auth.userId != nil else { return }
+        
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await householdManager.fetchHouseholds()
+            }
+            group.addTask {
+                await householdManager.fetchPairedDevices()
             }
         }
     }
