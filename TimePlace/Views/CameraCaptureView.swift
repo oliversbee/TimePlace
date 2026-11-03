@@ -22,9 +22,6 @@ struct CameraCaptureView: View {
 
             GeometryReader { geo in
 
-                // Match each live PiP to the corresponding camera's still-photo
-                // aspect ratio. The post-capture preview uses the captured
-                // UIImage's dimensions with the same 120 x 160 maximum bounds.
                 let backPiPSize = pipSize(for: camera.backPreviewLayer)
                 let frontPiPSize = pipSize(for: camera.frontPreviewLayer)
 
@@ -95,8 +92,6 @@ struct CameraCaptureView: View {
         }
     }
 
-    /// Returns the PiP size that fits the camera's still-photo aspect ratio
-    /// inside the same 120 x 160 point bounds used after capture.
     private func pipSize(for previewLayer: AVCaptureVideoPreviewLayer?) -> CGSize {
 
         let maximumSize = CGSize(width: pipWidth, height: pipHeight)
@@ -178,9 +173,6 @@ struct CameraCaptureView: View {
 
         VStack {
 
-            // =========================================================
-            // TOP BAR
-            // =========================================================
             ZStack(alignment: .center) {
                 
                 HStack {
@@ -210,9 +202,6 @@ struct CameraCaptureView: View {
 
             Spacer()
 
-            // =========================================================
-            // BOTTOM BAR
-            // =========================================================
             ZStack(alignment: .center) {
                 
                 HStack {
@@ -234,7 +223,7 @@ struct CameraCaptureView: View {
                         .frame(width: 76, height: 76)
                         .overlay(
                             Circle()
-                                .fill(Color(red: 0.94, green: 0.41, blue: 0.33)) // Coral color matching the image
+                                .fill(Color(red: 0.94, green: 0.41, blue: 0.33))
                                 .frame(width: 64, height: 64)
                         )
                 }
@@ -252,9 +241,6 @@ private struct ShutterPressStyle: ButtonStyle {
     }
 }
 
-// =========================================================================
-// PREVIEW SLOT
-// =========================================================================
 private struct PreviewSlot: ViewModifier {
 
     let isMain: Bool
@@ -284,7 +270,6 @@ private struct PreviewSlot: ViewModifier {
     }
 
     private var cornerRadius: CGFloat {
-        // Unified corner radius to match the UI
         isMain ? 0 : 24
     }
 
@@ -313,51 +298,5 @@ private struct PreviewSlot: ViewModifier {
                 onTapWhenPiP()
             }
             .transaction { $0.animation = nil }
-    }
-}
-
-// =========================================================================
-// CAPTURE MODE TOGGLE (Updated Corner Radius)
-// =========================================================================
-struct CaptureModeToggle: View {
-    @Binding var mode: CameraManager.CaptureMode
-    
-    // Matching the 24 corner radius from PostPreviewView
-    private let cornerRadius: CGFloat = 24
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // One Mode Button
-            toggleButton(title: "One", icon: "square", isSelected: mode == .one) {
-                mode = .one
-            }
-            
-            // Both Mode Button
-            toggleButton(title: "Both", icon: "square.split.2x1", isSelected: mode == .both) {
-                mode = .both
-            }
-        }
-        .padding(4)
-        // Dark background mimicking the glass pill in the UI
-        .background(Color(white: 0.15).opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-    }
-
-    private func toggleButton(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .foregroundColor(isSelected ? .black : .white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            // Selected state background pill matching the corner radius
-            .background(isSelected ? Color.white : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 }
