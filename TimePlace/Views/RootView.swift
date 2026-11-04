@@ -5,7 +5,11 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if auth.isAuthenticated {
+            if auth.isInitializing {
+                // Show a black screen while checking the session
+                Color.black
+                    .ignoresSafeArea()
+            } else if auth.isAuthenticated {
                 CaptureHomeView()
             } else {
                 LoginView()

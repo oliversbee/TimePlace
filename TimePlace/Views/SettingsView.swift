@@ -2,10 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthManager
-    
-    // 1. Changed to EnvironmentObject to use preloaded data
     @EnvironmentObject var householdManager: HouseholdManager
-    
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var settingsViewModel = SettingsViewModel()
@@ -54,7 +51,7 @@ struct SettingsView: View {
                                 HStack {
                                     Image(systemName: "ellipsis.circle")
                                         .font(.system(size: 15, weight: .semibold))
-                                        .frame(width: 28) // Aligns with icons
+                                        .frame(width: 28)
                                     Text("View All Households")
                                 }
                             }
@@ -68,7 +65,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "person.badge.plus")
                                 .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 28) // Aligns with icons
+                                .frame(width: 28)
                             Text("Join Household")
                         }
                         .foregroundColor(.blue)
@@ -81,7 +78,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "plus")
                                 .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 28) // Aligns with icons
+                                .frame(width: 28)
                             Text("Create Household")
                         }
                         .foregroundColor(.blue)
@@ -92,13 +89,12 @@ struct SettingsView: View {
 
                 // MARK: - Frame Section
                 if !householdManager.pairedDevices.isEmpty {
-                    // User has a frame: Only show the frame(s), no "Add Frame" option
                     Section {
                         ForEach(householdManager.pairedDevices) { device in
+                            // Goes straight to DisplayConfigView
                             NavigationLink {
-                                DevicesSettingsView()
+                                DisplayConfigView(device: device)
                                     .environmentObject(auth)
-                                    .environmentObject(householdManager)
                                     .environmentObject(settingsViewModel)
                             } label: {
                                 HStack {
@@ -112,7 +108,6 @@ struct SettingsView: View {
                         Text("FRAME")
                     }
                 } else {
-                    // User has no frame: Show "Add Frame" button
                     Section {
                         Button {
                             showAddFrameSheet = true
@@ -144,7 +139,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            // MARK: - Pinned Sign Out Button
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
                     Divider()
@@ -169,7 +163,6 @@ struct SettingsView: View {
             AddFrameView()
                 .environmentObject(householdManager)
         }
-        // MARK: - Join Household Alert
         .alert("Join Household", isPresented: $showJoinHouseholdAlert) {
             TextField("6-character code", text: $joinCode)
                 .textInputAutocapitalization(.characters)
@@ -188,7 +181,6 @@ struct SettingsView: View {
         } message: {
             Text("Enter the 6-character join code for the household.")
         }
-        // MARK: - Create Household Alert
         .alert("Create Household", isPresented: $showCreateHouseholdAlert) {
             TextField("Household Name", text: $newHouseholdName)
             
@@ -206,9 +198,7 @@ struct SettingsView: View {
         } message: {
             Text("Enter a name for your new household.")
         }
-        // Note: Removed the .task modifier here because the data is preloaded in CaptureHomeView
         .task {
-            // Optional: Preload settings specific data if needed
             guard let userId = auth.userId else { return }
             await settingsViewModel.loadData(currentUserId: userId)
         }
