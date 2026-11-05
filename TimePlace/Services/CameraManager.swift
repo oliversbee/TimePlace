@@ -78,11 +78,9 @@ final class CameraManager: NSObject, ObservableObject {
                 self.session.startRunning()
                 let running = self.session.isRunning
                 
-                // FIX: Use ramp instead of direct assignment. MultiCam sessions often ignore direct assignments.
-                if let device = self.backDevice {
-                    try? device.lockForConfiguration()
-                    device.ramp(toVideoZoomFactor: 1.0, withRate: 30.0)
-                    device.unlockForConfiguration()
+                if running {
+                    // FIX: Force 1.0x zoom on the session queue when session starts
+                    self.setZoomFactor(1.0)
                 }
                 
                 DispatchQueue.main.async { self.isSessionRunning = running }
@@ -97,6 +95,30 @@ final class CameraManager: NSObject, ObservableObject {
             guard self.session.isRunning else { return }
             self.session.stopRunning()
             DispatchQueue.main.async { self.isSessionRunning = false }
+        }
+    }
+
+    // MARK: - Zoom Logic
+    
+    // Internal helper that must be called on the sessionQueue
+    private func setZoomFactor(_ factor: CGFloat) {
+        let device = self.mainIsBack ? self.backDevice : self.frontDevice
+        guard let device = device else { return }
+        
+        do {
+            try device.lockForConfiguration()
+            let clamped = max(device.minAvailableVideoZoomFactor, min(device.maxAvailableVideoZoomFactor, factor))
+            device.videoZoomFactor = clamped
+            device.unlockForConfiguration()
+        } catch {
+            print("Failed to set zoom: \(error)")
+        }
+    }
+    
+    // Public method called from the View
+    func setZoom(factor: CGFloat) {
+        sessionQueue.async { [weak self] in
+            self?.setZoomFactor(factor)
         }
     }
 

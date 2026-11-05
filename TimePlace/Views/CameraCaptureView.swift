@@ -47,46 +47,31 @@ struct CameraCaptureView: View {
             shutterHaptic.prepare()
             toggleHaptic.prepare()
             camera.start()
+            isUltraWideActive = false
         }
         .onChange(of: camera.isSessionRunning) { isRunning in
             if isRunning {
-                // FIX: Force UI state to 1x and apply zoom when session starts
+                // Reset UI state and enforce 1.0x zoom on the camera
                 isUltraWideActive = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    applyZoom(1.0)
-                }
+                camera.setZoom(factor: 1.0)
             }
         }
         .onDisappear { camera.stop() }
         .onChange(of: camera.mainIsBack) { _ in
             isUltraWideActive = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                applyZoom(1.0)
-            }
-        }
-    }
-
-    private func applyZoom(_ factor: CGFloat) {
-        let device = camera.mainIsBack ? camera.backDevice : camera.frontDevice
-        guard let device = device else { return }
-        
-        do {
-            try device.lockForConfiguration()
-            let clamped = max(device.minAvailableVideoZoomFactor, min(device.maxAvailableVideoZoomFactor, factor))
-            // FIX: Use ramp instead of direct assignment for MultiCam sessions
-            device.ramp(toVideoZoomFactor: clamped, withRate: 30.0)
-            device.unlockForConfiguration()
-        } catch {
-            print("Zoom error: \(error)")
+            camera.setZoom(factor: 1.0)
         }
     }
 
     private func toggleZoom() {
         guard camera.mainIsBack, camera.isUltraWideAvailable else { return }
         
-        let target: CGFloat = isUltraWideActive ? 1.0 : 0.5
-        applyZoom(target)
-        isUltraWideActive.toggle()
+        let newState = !isUltraWideActive
+        isUltraWideActive = newState
+        
+        let factor: CGFloat = newState ? 0.5 : 1.0
+        camera.setZoom(factor: factor)
+        
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -147,16 +132,43 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // NATIVE SEGMENTED PICKER (Fix for the Pill UI)
-                Picker("Mode", selection: $camera.captureMode) {
-                    Text("One").tag(CaptureMode.single)
-                    Text("Both").tag(CaptureMode.both)
+                // CUSTOM DARK PILL TOGGLE
+                HStack(spacing: 0) {
+                    Button {
+                        if camera.captureMode != .single {
+                            camera.captureMode = .single
+                            toggleHaptic.selectionChanged()
+                        }
+                    } label: {
+                        Text("One")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(camera.captureMode == .single ? .black : .white)
+                            .frame(width: 70, height: 32)
+                            .background(
+                                Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        if camera.captureMode != .both {
+                            camera.captureMode = .both
+                            toggleHaptic.selectionChanged()
+                        }
+                    } label: {
+                        Text("Both")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(camera.captureMode == .both ? .black : .white)
+                            .frame(width: 70, height: 32)
+                            .background(
+                                Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
-                .onChange(of: camera.captureMode) { _ in
-                    toggleHaptic.selectionChanged()
-                }
+                .padding(2)
+                .background(Color(white: 0.2).opacity(0.9))
+                .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
