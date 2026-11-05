@@ -47,6 +47,7 @@ final class AuthManager: ObservableObject {
         try? await client.auth.signOut()
         isAuthenticated = false
         userId = nil
+        NotificationManager.shared.cancelAllPrompts() // NEW: Cancel pending reminders
     }
 
     func deleteAccount() async {

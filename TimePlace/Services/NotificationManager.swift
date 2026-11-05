@@ -4,9 +4,8 @@ import UserNotifications
 /// Schedules a local notification at a random time between 9am and 9pm
 /// each day, prompting the user to take their photo.
 ///
-/// Note: real BeReal fires everyone's notification at the same
-/// server-chosen moment via a push notification, which needs a backend
-/// (e.g. a scheduled Supabase Edge Function + APNs). This local-notification
+/// Note: real daily prompts that fire for everyone at the same time require
+/// a backend (e.g., a scheduled Edge Function + APNs). This local-notification
 /// version picks its own random time per device, which is the practical
 /// equivalent for a self-contained client app.
 final class NotificationManager: NSObject, ObservableObject {
@@ -17,13 +16,24 @@ final class NotificationManager: NSObject, ObservableObject {
     private let latestHour = 21    // 9pm
 
     func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            if granted {
+        let center = UNUserNotificationCenter.current()
+        
+        center.getNotificationSettings { settings in
+            if settings.authorizationStatus == .notDetermined {
+                // First time: Ask the user
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    if granted {
+                        self.scheduleUpcomingPrompts()
+                    }
+                }
+            } else if settings.authorizationStatus == .authorized {
+                // Already authorized: Just make sure the schedule is full
                 self.scheduleUpcomingPrompts()
             }
         }
     }
 
+    /// Cancels all pending reminders. Called on sign-out and account deletion.
     func cancelAllPrompts() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
