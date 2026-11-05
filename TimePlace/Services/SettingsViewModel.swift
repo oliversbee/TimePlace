@@ -4,7 +4,6 @@ import Supabase
 struct FamilyMember: Identifiable, Codable {
     let id: UUID
     let name: String
-    var householdIds: Set<UUID> = []
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -21,8 +20,6 @@ final class SettingsViewModel: ObservableObject {
     @Published var hiddenUserIds: Set<UUID> = []
     @Published var nicknames: [UUID: String] = [:]
 
-    @Published var selectedMemberForNickname: FamilyMember?
-    @Published var tempNicknameText: String = ""
     @Published var isSaving = false
     @Published var errorMessage: String?
 
@@ -40,7 +37,6 @@ final class SettingsViewModel: ObservableObject {
                 imageIntervalSeconds = preferences.imageIntervalSeconds
             }
         } catch {
-            // CHANGED: Friendly error message
             errorMessage = "We couldn't load your preferences. Please check your connection."
             return
         }
@@ -104,25 +100,6 @@ final class SettingsViewModel: ObservableObject {
             }
         } catch {
             errorMessage = "We couldn't update the hidden users."
-        }
-    }
-
-    // MARK: - Nicknames
-
-    func saveNickname(viewerId: UUID, targetId: UUID, nickname: String) async {
-        errorMessage = nil
-
-        do {
-            try await supabase.setNickname(viewerId: viewerId, targetId: targetId, nickname: nickname)
-
-            let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
-                nicknames.removeValue(forKey: targetId)
-            } else {
-                nicknames[targetId] = trimmed
-            }
-        } catch {
-            errorMessage = "We couldn't save the nickname."
         }
     }
 }
