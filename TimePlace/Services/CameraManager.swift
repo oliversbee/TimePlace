@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import QuartzCore
 
 enum CameraError: Error {
     case unsupportedDevice
@@ -156,6 +157,16 @@ final class CameraManager: NSObject, ObservableObject {
               let oldInput = backInput,
               let newInput = try? AVCaptureDeviceInput(device: device) else {
             return
+        }
+
+        // Fade the live preview during the physical lens change so the
+        // switch between 1x and 0.5x feels less abrupt.
+        DispatchQueue.main.async {
+            let transition = CATransition()
+            transition.type = .fade
+            transition.duration = 0.3
+            transition.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.backPreviewLayer.add(transition, forKey: "cameraZoomTransition")
         }
 
         session.beginConfiguration()

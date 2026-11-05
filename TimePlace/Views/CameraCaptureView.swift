@@ -214,10 +214,10 @@ struct CameraCaptureView: View {
             } label: {
                 Text(isUltraWideActive ? "0.5x" : "1x")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(isUltraWideActive ? .black : .white)
+                    .foregroundColor(.white)
                     .frame(width: 44, height: 44)
                     .background(
-                        Circle().fill(isUltraWideActive ? Color.yellow : Color.white.opacity(0.2))
+                        Circle().fill(Color.white.opacity(0.2))
                     )
                     .overlay(
                         Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
