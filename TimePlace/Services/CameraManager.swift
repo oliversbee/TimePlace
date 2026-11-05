@@ -38,6 +38,8 @@ final class CameraManager: NSObject, ObservableObject {
 
     private(set) var backDevice: AVCaptureDevice?
     private(set) var frontDevice: AVCaptureDevice?
+    private var backInput: AVCaptureDeviceInput?
+    private var isUsingUltraWide = false
 
     private let backOutput = AVCapturePhotoOutput()
     private let frontOutput = AVCapturePhotoOutput()
@@ -98,27 +100,115 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Zoom Logic
-    
-    // Internal helper that must be called on the sessionQueue
-    private func setZoomFactor(_ factor: CGFloat) {
-        let device = self.mainIsBack ? self.backDevice : self.frontDevice
-        guard let device = device else { return }
-        
-        do {
-            try device.lockForConfiguration()
-            let clamped = max(device.minAvailableVideoZoomFactor, min(device.maxAvailableVideoZoomFactor, factor))
-            device.videoZoomFactor = clamped
-            device.unlockForConfiguration()
-        } catch {
-            print("Failed to set zoom: \(error)")
+    // Restores the previous back-camera input and its connections after a
+    // failed camera switch. Must be called during session configuration.
+    private func restoreBackCameraInput(_ input: AVCaptureDeviceInput) {
+        session.addInputWithNoConnections(input)
+
+        guard let port = input.ports(for: .video,
+                                    sourceDeviceType: input.device.deviceType,
+                                    sourceDevicePosition: .back).first else {
+            return
+        }
+
+        let outputConnection = AVCaptureConnection(inputPorts: [port], output: backOutput)
+        if session.canAddConnection(outputConnection) {
+            session.addConnection(outputConnection)
+            applyPortraitOrientation(to: outputConnection)
+        }
+
+        let previewConnection = AVCaptureConnection(inputPort: port,
+                                                    videoPreviewLayer: backPreviewLayer)
+        if session.canAddConnection(previewConnection) {
+            session.addConnection(previewConnection)
+            applyPortraitOrientation(to: previewConnection)
         }
     }
-    
-    // Public method called from the View
+
+    // MARK: - Zoom Logic
+
+    // The physical ultra-wide camera is used for 0.5x because the
+    // virtual wide-angle camera clamps videoZoomFactor to its minimum.
+    // This helper must be called on the sessionQueue.
+    private func setZoomFactor(_ factor: CGFloat) {
+        guard mainIsBack else { return }
+
+        let shouldUseUltraWide = factor < 1.0
+        guard shouldUseUltraWide != isUsingUltraWide else { return }
+        switchBackCamera(toUltraWide: shouldUseUltraWide)
+    }
+
+    // Public method called from the View.
     func setZoom(factor: CGFloat) {
         sessionQueue.async { [weak self] in
             self?.setZoomFactor(factor)
+        }
+    }
+
+    // Switches the back-camera input while retaining the existing photo output
+    // and preview layer. Must be called on the sessionQueue.
+    private func switchBackCamera(toUltraWide: Bool) {
+        let deviceType: AVCaptureDevice.DeviceType = toUltraWide
+            ? .builtInUltraWideCamera
+            : .builtInWideAngleCamera
+
+        guard let device = AVCaptureDevice.default(deviceType, for: .video, position: .back),
+              let oldInput = backInput,
+              let newInput = try? AVCaptureDeviceInput(device: device) else {
+            return
+        }
+
+        session.beginConfiguration()
+
+        if let connection = backOutput.connection(with: .video) {
+            session.removeConnection(connection)
+        }
+        if let connection = backPreviewLayer.connection {
+            session.removeConnection(connection)
+        }
+        session.removeInput(oldInput)
+
+        guard session.canAddInput(newInput) else {
+            restoreBackCameraInput(oldInput)
+            session.commitConfiguration()
+            return
+        }
+
+        session.addInputWithNoConnections(newInput)
+
+        guard let port = newInput.ports(for: .video,
+                                        sourceDeviceType: device.deviceType,
+                                        sourceDevicePosition: .back).first else {
+            session.removeInput(newInput)
+            restoreBackCameraInput(oldInput)
+            session.commitConfiguration()
+            return
+        }
+
+        let outputConnection = AVCaptureConnection(inputPorts: [port], output: backOutput)
+        let previewConnection = AVCaptureConnection(inputPort: port, videoPreviewLayer: backPreviewLayer)
+
+        guard session.canAddConnection(outputConnection),
+              session.canAddConnection(previewConnection) else {
+            session.removeInput(newInput)
+            restoreBackCameraInput(oldInput)
+            session.commitConfiguration()
+            return
+        }
+
+        session.addConnection(outputConnection)
+        session.addConnection(previewConnection)
+        applyPortraitOrientation(to: outputConnection)
+        applyPortraitOrientation(to: previewConnection)
+
+        backInput = newInput
+        backDevice = device
+        isUsingUltraWide = toUltraWide
+
+        session.commitConfiguration()
+
+        DispatchQueue.main.async {
+            self.isTorchAvailable = device.hasTorch
         }
     }
 
@@ -169,19 +259,15 @@ final class CameraManager: NSObject, ObservableObject {
     }
 
     private func addBackCamera() throws {
-        let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInDualWideCamera, .builtInTripleCamera, .builtInWideAngleCamera],
-            mediaType: .video,
-            position: .back
-        )
-        
-        guard let device = discovery.devices.first,
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
             throw CameraError.setupFailed
         }
 
         backDevice = device
+        backInput = input
+        isUsingUltraWide = false
         session.addInputWithNoConnections(input)
 
         guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .back).first else {
