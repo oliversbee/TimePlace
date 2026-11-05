@@ -17,6 +17,9 @@ struct DisplayConfigView: View {
     @State private var selectedInterval: DisplayIntervalOption = .min1
     @State private var customHours = 0
     @State private var customMinutes = 1
+    
+    // NEW: Prevents saving to the database while the screen is first loading
+    @State private var isInitializing = false
 
     var body: some View {
         NavigationStack {
@@ -37,6 +40,9 @@ struct DisplayConfigView: View {
                         Text("Custom").tag(DisplayIntervalOption.custom)
                     }
                     .onChange(of: selectedInterval) { newValue in
+                        // NEW: Don't save if we are just loading the screen
+                        guard !isInitializing else { return }
+                        
                         if let seconds = standardSeconds(for: newValue) {
                             viewModel.imageIntervalSeconds = seconds
                             savePreferences()
@@ -66,8 +72,14 @@ struct DisplayConfigView: View {
                             .frame(maxWidth: .infinity)
                             .clipped()
                         }
-                        .onChange(of: customHours) { _ in updateCustomInterval() }
-                        .onChange(of: customMinutes) { _ in updateCustomInterval() }
+                        .onChange(of: customHours) { _ in 
+                            guard !isInitializing else { return }
+                            updateCustomInterval() 
+                        }
+                        .onChange(of: customMinutes) { _ in 
+                            guard !isInitializing else { return }
+                            updateCustomInterval() 
+                        }
                     }
                 }
 
@@ -106,9 +118,17 @@ struct DisplayConfigView: View {
             }
             .task {
                 if let userId = auth.userId {
+                    isInitializing = true // 1. Lock saving
+                    
                     await viewModel.loadData(currentUserId: userId)
-                    viewModel.displayName = device.name
+                    // REMOVED: viewModel.displayName = device.name (This was the bug!)
+                    
                     initializeIntervalSelection()
+                    
+                    // 2. Add a tiny delay before unlocking saving to ensure Picker settles
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isInitializing = false 
+                    }
                 }
             }
         }
