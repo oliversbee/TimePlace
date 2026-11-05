@@ -17,7 +17,7 @@ struct PreferencesSettingsView: View {
 
     var body: some View {
         Form {
-            // Account deletion errors (added in Topic 1)
+            // Account deletion errors
             if let message = auth.errorMessage {
                 Section {
                     Text(message).foregroundColor(.red)
@@ -25,7 +25,6 @@ struct PreferencesSettingsView: View {
             }
 
             Section("Appearance") {
-                // Filtered to remove the .system (Automatic) option
                 Picker("Theme", selection: appearanceBinding) {
                     ForEach(AppearanceMode.allCases.filter { $0 != .system }) { mode in
                         Label(mode.label, systemImage: mode.icon).tag(mode)
@@ -33,11 +32,11 @@ struct PreferencesSettingsView: View {
                 }
             }
             
-            // NEW: Legal & Support Links (App Store Guideline 1.2 & 5.1.1)
-            Section("Legal & Support") {
-                Link("Terms of Service", destination: URL(string: "https://yourdomain.com/terms")!)
-                Link("Privacy Policy", destination: URL(string: "https://yourdomain.com/privacy")!)
-                Link("Contact Support", destination: URL(string: "mailto:support@yourdomain.com")!)
+            // Cleaned up Legal & Support section
+            Section("About") {
+                NavigationLink("Legal & Support") {
+                    LegalSupportView()
+                }
             }
         }
         .navigationTitle("Profile")
@@ -82,5 +81,23 @@ struct PreferencesSettingsView: View {
         } message: {
             Text("This permanently deletes your account, your photos and your household memberships. This can't be undone.")
         }
+    }
+}
+
+// NEW: The nested view for the legal links
+struct LegalSupportView: View {
+    var body: some View {
+        Form {
+            Section {
+                Link("Terms of Service", destination: URL(string: "https://yourdomain.com/terms")!)
+                Link("Privacy Policy", destination: URL(string: "https://yourdomain.com/privacy")!)
+            }
+            
+            Section {
+                Link("Contact Support", destination: URL(string: "mailto:support@yourdomain.com")!)
+            }
+        }
+        .navigationTitle("Legal & Support")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
