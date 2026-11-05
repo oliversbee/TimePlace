@@ -33,9 +33,6 @@ final class SettingsViewModel: ObservableObject {
     func loadData(currentUserId: UUID) async {
         errorMessage = nil
 
-        // Preferences are loaded independently so a problem with family
-        // member/nickname data does not prevent the main preferences screen
-        // from loading.
         do {
             if let preferences = try await supabase.fetchPreferences(userId: currentUserId) {
                 displayName = preferences.displayName ?? ""
@@ -43,29 +40,29 @@ final class SettingsViewModel: ObservableObject {
                 imageIntervalSeconds = preferences.imageIntervalSeconds
             }
         } catch {
-            errorMessage = "Failed to load preferences: \(error.localizedDescription)"
+            // CHANGED: Friendly error message
+            errorMessage = "We couldn't load your preferences. Please check your connection."
             return
         }
 
-        // The following are used by the other settings screens.
         do {
             familyMembers = try await supabase
                 .fetchHouseholdMembers(excluding: currentUserId)
                 .map { FamilyMember(id: $0.id, name: $0.name ?? "") }
         } catch {
-            errorMessage = "Failed to load family members: \(error.localizedDescription)"
+            errorMessage = "We couldn't load your family members."
         }
 
         do {
             hiddenUserIds = try await supabase.fetchHiddenUserIds(userId: currentUserId)
         } catch {
-            errorMessage = "Failed to load hidden users: \(error.localizedDescription)"
+            errorMessage = "We couldn't load your hidden users."
         }
 
         do {
             nicknames = try await supabase.fetchNicknames(viewerId: currentUserId)
         } catch {
-            errorMessage = "Failed to load nicknames: \(error.localizedDescription)"
+            errorMessage = "We couldn't load your nicknames."
         }
     }
 
@@ -84,12 +81,9 @@ final class SettingsViewModel: ObservableObject {
         )
 
         do {
-            try await supabase.updatePreferences(
-                userId: currentUserId,
-                preferences: preferences
-            )
+            try await supabase.updatePreferences(userId: currentUserId, preferences: preferences)
         } catch {
-            errorMessage = "Failed to save preferences: \(error.localizedDescription)"
+            errorMessage = "We couldn't save your preferences."
         }
 
         isSaving = false
@@ -102,20 +96,14 @@ final class SettingsViewModel: ObservableObject {
 
         do {
             if hiddenUserIds.contains(familyUserId) {
-                try await supabase.unhideUser(
-                    userId: currentUserId,
-                    hiddenUserId: familyUserId
-                )
+                try await supabase.unhideUser(userId: currentUserId, hiddenUserId: familyUserId)
                 hiddenUserIds.remove(familyUserId)
             } else {
-                try await supabase.hideUser(
-                    userId: currentUserId,
-                    hiddenUserId: familyUserId
-                )
+                try await supabase.hideUser(userId: currentUserId, hiddenUserId: familyUserId)
                 hiddenUserIds.insert(familyUserId)
             }
         } catch {
-            errorMessage = "Failed to update hidden users: \(error.localizedDescription)"
+            errorMessage = "We couldn't update the hidden users."
         }
     }
 
@@ -125,11 +113,7 @@ final class SettingsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            try await supabase.setNickname(
-                viewerId: viewerId,
-                targetId: targetId,
-                nickname: nickname
-            )
+            try await supabase.setNickname(viewerId: viewerId, targetId: targetId, nickname: nickname)
 
             let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
@@ -138,7 +122,7 @@ final class SettingsViewModel: ObservableObject {
                 nicknames[targetId] = trimmed
             }
         } catch {
-            errorMessage = "Failed to save nickname: \(error.localizedDescription)"
+            errorMessage = "We couldn't save the nickname."
         }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 struct PostPreviewView: View {
     @EnvironmentObject var auth: AuthManager
@@ -12,6 +13,8 @@ struct PostPreviewView: View {
     @State private var isUploading = false
     @State private var errorMessage: String?
     
+    private let logger = Logger(subsystem: "com.timeplace.app", category: "Upload")
+    
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
 
     private let uniformCornerRadius: CGFloat = 24
@@ -20,8 +23,8 @@ struct PostPreviewView: View {
     private var creamBackground: Color {
         Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(red: 0.11, green: 0.10, blue: 0.09, alpha: 1.0) // Dark warm gray
-                : UIColor(red: 0.98, green: 0.96, blue: 0.92, alpha: 1.0) // Cream
+                ? UIColor(red: 0.11, green: 0.10, blue: 0.09, alpha: 1.0)
+                : UIColor(red: 0.98, green: 0.96, blue: 0.92, alpha: 1.0)
         })
     }
     
@@ -35,12 +38,9 @@ struct PostPreviewView: View {
 
     var body: some View {
         ZStack {
-            // Custom Cream Background
-            creamBackground
-                .ignoresSafeArea()
+            creamBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                
                 if let errorMessage {
                     GlassStatusBanner(text: errorMessage)
                         .padding(.top, 10)
@@ -92,8 +92,6 @@ struct PostPreviewView: View {
 
     private var controls: some View {
         HStack(spacing: 16) {
-            
-            // Retake Button
             Button(action: onRetake) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.counterclockwise")
@@ -110,14 +108,12 @@ struct PostPreviewView: View {
             .disabled(isUploading)
             .opacity(isUploading ? 0.5 : 1.0)
 
-            // Upload Button
             Button {
                 upload()
             } label: {
                 Group {
                     if isUploading {
-                        ProgressView()
-                            .tint(.white)
+                        ProgressView().tint(.white)
                     } else {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.up")
@@ -159,10 +155,12 @@ struct PostPreviewView: View {
                     onUploaded()
                 }
             } catch {
-                print("IMAGE UPLOAD ERROR:", error)
+                // CHANGED: Log the actual error for you to see in Xcode, show a friendly one to the user
+                logger.error("Image upload failed: \(error.localizedDescription)")
+                
                 await MainActor.run {
                     isUploading = false
-                    errorMessage = "Send failed: \(error.localizedDescription)"
+                    errorMessage = "We couldn't upload your photo. Please check your connection and try again."
                 }
             }
         }

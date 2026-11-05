@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import UIKit
 import QuartzCore
+import OSLog
 
 enum CameraError: Error {
     case setupFailed
@@ -56,9 +57,10 @@ final class CameraManager: NSObject, ObservableObject {
     private var flashSafetyTimer: DispatchWorkItem?
     private let flashWarmUp: TimeInterval = 0.22
     private let flashMaxDuration: TimeInterval = 3.0
+    
+    private let logger = Logger(subsystem: "com.timeplace.app", category: "Camera")
 
     override init() {
-        // Use MultiCam if supported, otherwise fallback to standard session
         if AVCaptureMultiCamSession.isMultiCamSupported {
             session = AVCaptureMultiCamSession()
         } else {
@@ -76,9 +78,7 @@ final class CameraManager: NSObject, ObservableObject {
         requestAccess { [weak self] granted in
             guard let self else { return }
             guard granted else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Camera access is off. Enable it in Settings."
-                }
+                DispatchQueue.main.async { self.errorMessage = "Camera access is off. Enable it in Settings." }
                 return
             }
             self.sessionQueue.async {
@@ -87,11 +87,7 @@ final class CameraManager: NSObject, ObservableObject {
                 guard !self.session.isRunning else { return }
                 self.session.startRunning()
                 let running = self.session.isRunning
-                
-                if running {
-                    self.setZoomFactor(1.0)
-                }
-                
+                if running { self.setZoomFactor(1.0) }
                 DispatchQueue.main.async { self.isSessionRunning = running }
             }
         }
@@ -107,55 +103,40 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
 
+    // ... [Keep the rest of the Zoom/Switch logic exactly as you have it from Topic 5] ...
+    // (I'll include the whole file so it's easy to paste)
+
     private func restoreBackCameraInput(_ input: AVCaptureDeviceInput) {
         session.addInputWithNoConnections(input)
-
-        guard let port = input.ports(for: .video,
-                                    sourceDeviceType: input.device.deviceType,
-                                    sourceDevicePosition: .back).first else {
-            return
-        }
-
+        guard let port = input.ports(for: .video, sourceDeviceType: input.device.deviceType, sourceDevicePosition: .back).first else { return }
         let outputConnection = AVCaptureConnection(inputPorts: [port], output: backOutput)
         if session.canAddConnection(outputConnection) {
             session.addConnection(outputConnection)
             applyPortraitOrientation(to: outputConnection)
         }
-
-        let previewConnection = AVCaptureConnection(inputPort: port,
-                                                    videoPreviewLayer: backPreviewLayer)
+        let previewConnection = AVCaptureConnection(inputPort: port, videoPreviewLayer: backPreviewLayer)
         if session.canAddConnection(previewConnection) {
             session.addConnection(previewConnection)
             applyPortraitOrientation(to: previewConnection)
         }
     }
 
-    // MARK: - Zoom Logic
-
     private func setZoomFactor(_ factor: CGFloat) {
         guard mainIsBack else { return }
-
         let shouldUseUltraWide = factor < 1.0
         guard shouldUseUltraWide != isUsingUltraWide else { return }
         switchBackCamera(toUltraWide: shouldUseUltraWide)
     }
 
     func setZoom(factor: CGFloat) {
-        sessionQueue.async { [weak self] in
-            self?.setZoomFactor(factor)
-        }
+        sessionQueue.async { [weak self] in self?.setZoomFactor(factor) }
     }
 
     private func switchBackCamera(toUltraWide: Bool) {
-        let deviceType: AVCaptureDevice.DeviceType = toUltraWide
-            ? .builtInUltraWideCamera
-            : .builtInWideAngleCamera
-
+        let deviceType: AVCaptureDevice.DeviceType = toUltraWide ? .builtInUltraWideCamera : .builtInWideAngleCamera
         guard let device = AVCaptureDevice.default(deviceType, for: .video, position: .back),
               let oldInput = backInput,
-              let newInput = try? AVCaptureDeviceInput(device: device) else {
-            return
-        }
+              let newInput = try? AVCaptureDeviceInput(device: device) else { return }
 
         DispatchQueue.main.async {
             let transition = CATransition()
@@ -168,12 +149,8 @@ final class CameraManager: NSObject, ObservableObject {
         session.beginConfiguration()
 
         if isMultiCamSupported {
-            if let connection = backOutput.connection(with: .video) {
-                session.removeConnection(connection)
-            }
-            if let connection = backPreviewLayer.connection {
-                session.removeConnection(connection)
-            }
+            if let connection = backOutput.connection(with: .video) { session.removeConnection(connection) }
+            if let connection = backPreviewLayer.connection { session.removeConnection(connection) }
             session.removeInput(oldInput)
 
             guard session.canAddInput(newInput) else {
@@ -181,12 +158,9 @@ final class CameraManager: NSObject, ObservableObject {
                 session.commitConfiguration()
                 return
             }
-
             session.addInputWithNoConnections(newInput)
 
-            guard let port = newInput.ports(for: .video,
-                                            sourceDeviceType: device.deviceType,
-                                            sourceDevicePosition: .back).first else {
+            guard let port = newInput.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .back).first else {
                 session.removeInput(newInput)
                 restoreBackCameraInput(oldInput)
                 session.commitConfiguration()
@@ -196,8 +170,7 @@ final class CameraManager: NSObject, ObservableObject {
             let outputConnection = AVCaptureConnection(inputPorts: [port], output: backOutput)
             let previewConnection = AVCaptureConnection(inputPort: port, videoPreviewLayer: backPreviewLayer)
 
-            guard session.canAddConnection(outputConnection),
-                  session.canAddConnection(previewConnection) else {
+            guard session.canAddConnection(outputConnection), session.canAddConnection(previewConnection) else {
                 session.removeInput(newInput)
                 restoreBackCameraInput(oldInput)
                 session.commitConfiguration()
@@ -209,7 +182,6 @@ final class CameraManager: NSObject, ObservableObject {
             applyPortraitOrientation(to: outputConnection)
             applyPortraitOrientation(to: previewConnection)
         } else {
-            // Standard Session logic
             session.removeInput(oldInput)
             guard session.canAddInput(newInput) else {
                 session.addInput(oldInput)
@@ -217,21 +189,15 @@ final class CameraManager: NSObject, ObservableObject {
                 return
             }
             session.addInput(newInput)
-            
-            if let connection = backOutput.connection(with: .video) {
-                applyPortraitOrientation(to: connection)
-            }
+            if let connection = backOutput.connection(with: .video) { applyPortraitOrientation(to: connection) }
         }
 
         backInput = newInput
         backDevice = device
         isUsingUltraWide = toUltraWide
-
         session.commitConfiguration()
 
-        DispatchQueue.main.async {
-            self.isTorchAvailable = device.hasTorch
-        }
+        DispatchQueue.main.async { self.isTorchAvailable = device.hasTorch }
     }
 
     private func requestAccess(completion: @escaping (Bool) -> Void) {
@@ -244,54 +210,38 @@ final class CameraManager: NSObject, ObservableObject {
 
     private func configureIfNeeded() {
         guard !isConfigured else { return }
-
         session.beginConfiguration()
         do {
             if isMultiCamSupported {
-                // Multi-Cam Setup
                 try addBackCamera()
                 try addFrontCamera()
             } else {
-                // Fallback Single-Camera Setup
                 try addBackCameraStandard()
             }
-            
             session.commitConfiguration()
             isConfigured = true
             
             let torchAvailable = backDevice?.hasTorch ?? false
-            let discovery = AVCaptureDevice.DiscoverySession(
-                deviceTypes: [.builtInUltraWideCamera],
-                mediaType: .video,
-                position: .back
-            )
+            let discovery = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInUltraWideCamera], mediaType: .video, position: .back)
             let hasUltraWideHardware = !discovery.devices.isEmpty
             
             DispatchQueue.main.async {
                 self.isTorchAvailable = torchAvailable
                 self.isUltraWideAvailable = hasUltraWideHardware
                 self.errorMessage = nil
-                
-                // Force Single mode if Multi-Cam isn't available
-                if !self.isMultiCamSupported {
-                    self.captureMode = .single
-                }
+                if !self.isMultiCamSupported { self.captureMode = .single }
             }
         } catch {
             session.commitConfiguration()
-            DispatchQueue.main.async {
-                self.errorMessage = "Camera setup failed. Try relaunching the app."
-            }
+            logger.error("Camera setup failed: \(error.localizedDescription)")
+            DispatchQueue.main.async { self.errorMessage = "Camera setup failed. Try relaunching the app." }
         }
     }
 
     private func addBackCameraStandard() throws {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
-            throw CameraError.setupFailed
-        }
-
+              session.canAddInput(input) else { throw CameraError.setupFailed }
         backDevice = device
         backInput = input
         isUsingUltraWide = false
@@ -299,28 +249,19 @@ final class CameraManager: NSObject, ObservableObject {
 
         guard session.canAddOutput(backOutput) else { throw CameraError.setupFailed }
         session.addOutput(backOutput)
-        
-        if let connection = backOutput.connection(with: .video) {
-            applyPortraitOrientation(to: connection)
-        }
+        if let connection = backOutput.connection(with: .video) { applyPortraitOrientation(to: connection) }
     }
 
     private func addBackCamera() throws {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
-            throw CameraError.setupFailed
-        }
-
+              session.canAddInput(input) else { throw CameraError.setupFailed }
         backDevice = device
         backInput = input
         isUsingUltraWide = false
         session.addInputWithNoConnections(input)
 
-        guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .back).first else {
-            throw CameraError.setupFailed
-        }
-
+        guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .back).first else { throw CameraError.setupFailed }
         guard session.canAddOutput(backOutput) else { throw CameraError.setupFailed }
         session.addOutputWithNoConnections(backOutput)
 
@@ -338,17 +279,11 @@ final class CameraManager: NSObject, ObservableObject {
     private func addFrontCamera() throws {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
               let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
-            throw CameraError.setupFailed
-        }
-
+              session.canAddInput(input) else { throw CameraError.setupFailed }
         frontDevice = device
         session.addInputWithNoConnections(input)
 
-        guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .front).first else {
-            throw CameraError.setupFailed
-        }
-
+        guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .front).first else { throw CameraError.setupFailed }
         guard session.canAddOutput(frontOutput) else { throw CameraError.setupFailed }
         session.addOutputWithNoConnections(frontOutput)
 
@@ -374,18 +309,13 @@ final class CameraManager: NSObject, ObservableObject {
 
     private func applyPortraitOrientation(to connection: AVCaptureConnection) {
         if #available(iOS 17.0, *) {
-            if connection.isVideoRotationAngleSupported(90) {
-                connection.videoRotationAngle = 90
-            }
+            if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
         } else {
-            if connection.isVideoOrientationSupported {
-                connection.videoOrientation = .portrait
-            }
+            if connection.isVideoOrientationSupported { connection.videoOrientation = .portrait }
         }
     }
 
     func swapMain() {
-        // Prevent swapping if Multi-Cam is not supported
         guard isMultiCamSupported else { return }
         mainIsBack.toggle()
     }
@@ -413,16 +343,12 @@ final class CameraManager: NSObject, ObservableObject {
     private func beginFlash(torch: Bool, screen: Bool) {
         if screen {
             DispatchQueue.main.async {
-                if self.originalBrightness == nil {
-                    self.originalBrightness = UIScreen.main.brightness
-                }
+                if self.originalBrightness == nil { self.originalBrightness = UIScreen.main.brightness }
                 UIScreen.main.brightness = 1.0
                 self.isScreenFlashing = true
             }
         }
-        if torch {
-            sessionQueue.async { [weak self] in self?.setTorchInternal(true) }
-        }
+        if torch { sessionQueue.async { [weak self] in self?.setTorchInternal(true) } }
 
         flashSafetyTimer?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.endFlash() }
@@ -532,12 +458,19 @@ final class CameraManager: NSObject, ObservableObject {
 
 extension CameraManager: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        // CHANGED: Log the error and show a UI message if the capture fails
         guard error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else {
+            logger.error("Camera capture failed: \(error?.localizedDescription ?? "Unknown error")")
+            
             captureLock.lock()
             isCapturing = false
             captureCompletion = nil
             captureLock.unlock()
             endFlash()
+            
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to capture photo. Please try again."
+            }
             return
         }
 
