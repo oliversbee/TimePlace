@@ -17,11 +17,13 @@ struct PreferencesSettingsView: View {
 
     var body: some View {
         Form {
+            // Account deletion errors (added in Topic 1)
             if let message = auth.errorMessage {
                 Section {
                     Text(message).foregroundColor(.red)
                 }
             }
+
             Section("Appearance") {
                 // Filtered to remove the .system (Automatic) option
                 Picker("Theme", selection: appearanceBinding) {
@@ -29,6 +31,13 @@ struct PreferencesSettingsView: View {
                         Label(mode.label, systemImage: mode.icon).tag(mode)
                     }
                 }
+            }
+            
+            // NEW: Legal & Support Links (App Store Guideline 1.2 & 5.1.1)
+            Section("Legal & Support") {
+                Link("Terms of Service", destination: URL(string: "https://yourdomain.com/terms")!)
+                Link("Privacy Policy", destination: URL(string: "https://yourdomain.com/privacy")!)
+                Link("Contact Support", destination: URL(string: "mailto:support@yourdomain.com")!)
             }
         }
         .navigationTitle("Profile")

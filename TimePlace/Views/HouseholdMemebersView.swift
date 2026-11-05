@@ -15,6 +15,11 @@ struct HouseholdMembersView: View {
     @State private var editingMemberId: UUID? = nil
     @State private var draftNickname: String = ""
     
+    // Report State
+    @State private var memberToReport: HouseholdMember?
+    @State private var showReportAlert = false
+    @State private var reportReason = ""
+    
     // Automatically manages the keyboard focus
     @FocusState private var focusedMemberId: UUID?
 
@@ -105,6 +110,25 @@ struct HouseholdMembersView: View {
                                 .buttonStyle(.plain)
                             }
                         }
+                        // NEW: Unobtrusive swipe actions for App Store Guideline 1.2
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                memberToReport = member
+                                reportReason = ""
+                                showReportAlert = true
+                            } label: {
+                                Label("Report", systemImage: "exclamationmark.bubble")
+                            }
+                            
+                            Button {
+                                Task {
+                                    _ = await manager.hideUser(targetUserId: member.userId)
+                                }
+                            } label: {
+                                Label("Block", systemImage: "hand.raised.slash")
+                            }
+                            .tint(.orange)
+                        }
                     }
                 }
             }
@@ -130,6 +154,16 @@ struct HouseholdMembersView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You will be removed from \(household.name).")
+        }
+        // NEW: Report Alert
+        .alert("Report User", isPresented: $showReportAlert) {
+            TextField("Reason", text: $reportReason)
+            Button("Cancel", role: .cancel) { memberToReport = nil }
+            Button("Submit", role: .destructive) {
+                submitReport()
+            }
+        } message: {
+            Text("This will privately notify the developer. You can also block this user by swiping left and tapping Block.")
         }
     }
 
@@ -183,6 +217,27 @@ struct HouseholdMembersView: View {
         }
     }
 
+    // MARK: - Submit Report
+    private func submitReport() {
+        guard let userToReport = memberToReport, let currentUserId = manager.currentUserId else { return }
+        
+        let finalReason = reportReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        Task {
+            try? await SupabaseManager.shared.client.from("reports").insert(
+                NewReport(
+                    reporter_id: currentUserId,
+                    reported_user_id: userToReport.userId,
+                    reason: finalReason.isEmpty ? "No reason provided" : finalReason
+                )
+            ).execute()
+            
+            await MainActor.run {
+                memberToReport = nil
+            }
+        }
+    }
+
     // MARK: - Leave
 
     private func leaveHousehold() async {
@@ -192,4 +247,11 @@ struct HouseholdMembersView: View {
             dismiss()
         }
     }
+}
+
+// Struct for the Report API Call
+struct NewReport: Encodable {
+    let reporter_id: UUID
+    let reported_user_id: UUID
+    let reason: String
 }
