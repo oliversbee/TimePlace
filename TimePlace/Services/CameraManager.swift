@@ -36,10 +36,13 @@ final class CameraManager: NSObject, ObservableObject {
     let backPreviewLayer: AVCaptureVideoPreviewLayer
     let frontPreviewLayer: AVCaptureVideoPreviewLayer
 
+    // Expose the actual virtual devices so the view can adjust zoom correctly
+    private(set) var backDevice: AVCaptureDevice?
+    private(set) var frontDevice: AVCaptureDevice?
+
     private let backOutput = AVCapturePhotoOutput()
     private let frontOutput = AVCapturePhotoOutput()
     private let sessionQueue = DispatchQueue(label: "com.app.camera.session")
-    private var backDevice: AVCaptureDevice?
     private var isConfigured = false
     private var backCaptureImage: UIImage?
     private var frontCaptureImage: UIImage?
@@ -114,7 +117,7 @@ final class CameraManager: NSObject, ObservableObject {
             session.commitConfiguration()
             isConfigured = true
             
-            // FIX: Force zoom to 1.0x immediately on setup so it doesn't default to 0.5x
+            // FIX: Force zoom back to 1.0x immediately after setup
             if let device = backDevice {
                 try? device.lockForConfiguration()
                 device.videoZoomFactor = 1.0
@@ -122,10 +125,7 @@ final class CameraManager: NSObject, ObservableObject {
             }
             
             let torchAvailable = backDevice?.hasTorch ?? false
-            
-            // Check for physical hardware existence of the ultra-wide lens
-            let ultraWideDevice = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
-            let hasUltraWideHardware = ultraWideDevice != nil
+            let hasUltraWideHardware = backDevice?.minAvailableVideoZoomFactor ?? 1.0 <= 0.5 + 0.001
             
             DispatchQueue.main.async {
                 self.isTorchAvailable = torchAvailable
@@ -181,6 +181,7 @@ final class CameraManager: NSObject, ObservableObject {
             throw CameraError.setupFailed
         }
 
+        frontDevice = device
         session.addInputWithNoConnections(input)
 
         guard let port = input.ports(for: .video, sourceDeviceType: device.deviceType, sourceDevicePosition: .front).first else {

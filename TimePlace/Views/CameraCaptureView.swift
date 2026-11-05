@@ -48,38 +48,29 @@ struct CameraCaptureView: View {
             toggleHaptic.prepare()
             camera.start()
             
-            // Ensure zoom is 1.0x on first appear
+            // Force UI state to 1x and apply hardware zoom
+            isUltraWideActive = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                applyZoom(1.0, animated: false)
+                applyZoom(1.0)
             }
         }
         .onDisappear { camera.stop() }
         .onChange(of: camera.mainIsBack) { _ in
             isUltraWideActive = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                applyZoom(1.0, animated: false)
+                applyZoom(1.0)
             }
         }
     }
 
-    private var currentZoomDevice: AVCaptureDevice? {
-        let layer = camera.mainIsBack ? camera.backPreviewLayer : camera.frontPreviewLayer
-        guard let session = layer.session else { return nil }
-        let position: AVCaptureDevice.Position = camera.mainIsBack ? .back : .front
-        let inputs = session.inputs.compactMap { $0 as? AVCaptureDeviceInput }
-        return inputs.first { $0.device.position == position }?.device
-    }
-
-    private func applyZoom(_ factor: CGFloat, animated: Bool) {
-        guard let device = currentZoomDevice else { return }
+    private func applyZoom(_ factor: CGFloat) {
+        // Use the actual device from CameraManager, not the session inputs
+        guard let device = camera.mainIsBack ? camera.backDevice : camera.frontDevice else { return }
+        
         do {
             try device.lockForConfiguration()
             let clamped = max(device.minAvailableVideoZoomFactor, min(device.maxAvailableVideoZoomFactor, factor))
-            if animated {
-                device.ramp(toVideoZoomFactor: clamped, withRate: 12.0)
-            } else {
-                device.videoZoomFactor = clamped
-            }
+            device.videoZoomFactor = clamped
             device.unlockForConfiguration()
         } catch {
             print("Zoom configuration error:", error)
@@ -87,17 +78,12 @@ struct CameraCaptureView: View {
     }
 
     private func toggleZoom() {
-        guard camera.mainIsBack, let device = currentZoomDevice else { return }
+        guard camera.mainIsBack, camera.isUltraWideAvailable else { return }
         
-        // Determine target zoom based on current state
         let target: CGFloat = isUltraWideActive ? 1.0 : 0.5
-        
-        // Check if the target is actually supported by the hardware before changing UI
-        if target >= device.minAvailableVideoZoomFactor {
-            applyZoom(target, animated: true)
-            isUltraWideActive.toggle()
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
+        applyZoom(target)
+        isUltraWideActive.toggle()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func swapMainCamera() {
@@ -157,16 +143,43 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // NATIVE PICKER STYLE
-                Picker("Mode", selection: $camera.captureMode) {
-                    Text("One").tag(CaptureMode.single)
-                    Text("Both").tag(CaptureMode.both)
+                // CUSTOM DARK NATIVE-LOOKING PILL
+                HStack(spacing: 0) {
+                    Button {
+                        if camera.captureMode != .single {
+                            camera.captureMode = .single
+                            toggleHaptic.selectionChanged()
+                        }
+                    } label: {
+                        Text("One")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(camera.captureMode == .single ? .black : .white)
+                            .frame(width: 70, height: 32)
+                            .background(
+                                Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        if camera.captureMode != .both {
+                            camera.captureMode = .both
+                            toggleHaptic.selectionChanged()
+                        }
+                    } label: {
+                        Text("Both")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(camera.captureMode == .both ? .black : .white)
+                            .frame(width: 70, height: 32)
+                            .background(
+                                Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 140) // Adjust width as needed
-                .onChange(of: camera.captureMode) { _ in
-                    toggleHaptic.selectionChanged()
-                }
+                .padding(2)
+                .background(Color(white: 0.2).opacity(0.9))
+                .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -204,7 +217,6 @@ struct CameraCaptureView: View {
         }
     }
 
-    // Only shows if back camera is main AND hardware supports it
     @ViewBuilder
     private var zoomToggle: some View {
         if camera.mainIsBack && camera.isUltraWideAvailable {
