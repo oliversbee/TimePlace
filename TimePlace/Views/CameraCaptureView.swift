@@ -76,6 +76,8 @@ struct CameraCaptureView: View {
     }
 
     private func swapMainCamera() {
+        // Do nothing if multi-cam is not supported
+        guard camera.isMultiCamSupported else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         camera.swapMain()
     }
@@ -132,43 +134,45 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // CUSTOM DARK PILL TOGGLE
-                HStack(spacing: 0) {
-                    Button {
-                        if camera.captureMode != .single {
-                            camera.captureMode = .single
-                            toggleHaptic.selectionChanged()
+                // Only show the Single/Multi toggle if the device supports it
+                if camera.isMultiCamSupported {
+                    HStack(spacing: 0) {
+                        Button {
+                            if camera.captureMode != .single {
+                                camera.captureMode = .single
+                                toggleHaptic.selectionChanged()
+                            }
+                        } label: {
+                            Text("Single")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(camera.captureMode == .single ? .black : .white)
+                                .frame(width: 70, height: 32)
+                                .background(
+                                    Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
+                                )
                         }
-                    } label: {
-                        Text("Single")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(camera.captureMode == .single ? .black : .white)
-                            .frame(width: 70, height: 32)
-                            .background(
-                                Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
+                        .buttonStyle(.plain)
 
-                    Button {
-                        if camera.captureMode != .both {
-                            camera.captureMode = .both
-                            toggleHaptic.selectionChanged()
+                        Button {
+                            if camera.captureMode != .both {
+                                camera.captureMode = .both
+                                toggleHaptic.selectionChanged()
+                            }
+                        } label: {
+                            Text("Multi")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(camera.captureMode == .both ? .black : .white)
+                                .frame(width: 70, height: 32)
+                                .background(
+                                    Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
+                                )
                         }
-                    } label: {
-                        Text("Multi")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(camera.captureMode == .both ? .black : .white)
-                            .frame(width: 70, height: 32)
-                            .background(
-                                Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
-                            )
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(2)
+                    .background(Color(white: 0.2).opacity(0.9))
+                    .clipShape(Capsule())
                 }
-                .padding(2)
-                .background(Color(white: 0.2).opacity(0.9))
-                .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -185,7 +189,10 @@ struct CameraCaptureView: View {
                 ZStack(alignment: .center) {
                     HStack {
                         Spacer()
-                        GlassIconButton(systemName: "arrow.triangle.2.circlepath.camera", action: swapMainCamera)
+                        // Only show flip camera button if Multi-Cam is supported
+                        if camera.isMultiCamSupported {
+                            GlassIconButton(systemName: "arrow.triangle.2.circlepath.camera", action: swapMainCamera)
+                        }
                     }
                     .padding(.horizontal, 20)
 
