@@ -5,15 +5,18 @@ struct SettingsView: View {
     @EnvironmentObject var householdManager: HouseholdManager
     @Environment(\.dismiss) private var dismiss
 
+    // Needed so the light/dark toggle from the Profile page updates this screen live.
+    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+
     @StateObject private var settingsViewModel = SettingsViewModel()
-    
+
     // Sheet for Frame pairing
     @State private var showAddFrameSheet = false
-    
+
     // Alerts for Household logic
     @State private var showJoinHouseholdAlert = false
     @State private var joinCode = ""
-    
+
     @State private var showCreateHouseholdAlert = false
     @State private var newHouseholdName = ""
 
@@ -40,7 +43,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        
+
                         // View All Option (only if > 3)
                         if householdManager.households.count > 3 {
                             NavigationLink {
@@ -57,7 +60,7 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    
+
                     // Join Household Button
                     Button {
                         showJoinHouseholdAlert = true
@@ -70,7 +73,7 @@ struct SettingsView: View {
                         }
                         .foregroundColor(.blue)
                     }
-                    
+
                     // Create Household Button
                     Button {
                         showCreateHouseholdAlert = true
@@ -138,6 +141,19 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                // MARK: - Account / Profile (NEW)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        PreferencesSettingsView()
+                            .environmentObject(auth)
+                            .environmentObject(settingsViewModel)
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 20, weight: .regular))
+                    }
+                    .accessibilityLabel("Account")
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
@@ -158,7 +174,11 @@ struct SettingsView: View {
                 }
             }
         }
-        .preferredColorScheme(.light) 
+        // Replaces the previous hard-coded `.preferredColorScheme(.light)`
+        // so the Profile → Appearance toggle works here.
+        .preferredColorScheme(
+            (AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme
+        )
         .sheet(isPresented: $showAddFrameSheet) {
             AddFrameView()
                 .environmentObject(householdManager)
@@ -166,7 +186,7 @@ struct SettingsView: View {
         .alert("Join Household", isPresented: $showJoinHouseholdAlert) {
             TextField("6-character code", text: $joinCode)
                 .textInputAutocapitalization(.characters)
-            
+
             Button("Cancel", role: .cancel) {
                 joinCode = ""
             }
@@ -183,7 +203,7 @@ struct SettingsView: View {
         }
         .alert("Create Household", isPresented: $showCreateHouseholdAlert) {
             TextField("Household Name", text: $newHouseholdName)
-            
+
             Button("Cancel", role: .cancel) {
                 newHouseholdName = ""
             }
@@ -211,7 +231,7 @@ struct SettingsView: View {
 struct SettingsIcon: View {
     let systemName: String
     let color: Color
-    
+
     var body: some View {
         Image(systemName: systemName)
             .font(.system(size: 14, weight: .bold))
@@ -228,7 +248,9 @@ struct SettingsIcon: View {
 struct AddFrameView: View {
     @EnvironmentObject var manager: HouseholdManager
     @Environment(\.dismiss) private var dismiss
-    
+
+    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+
     @State private var deviceClaimCode = ""
 
     var body: some View {
@@ -239,7 +261,7 @@ struct AddFrameView: View {
                         Text(error).foregroundColor(.red)
                     }
                 }
-                
+
                 Section(
                     header: Text("Pair New Frame"),
                     footer: Text("Enter the 6-character code displayed on your frame.")
@@ -273,6 +295,9 @@ struct AddFrameView: View {
                 }
             }
         }
-        .preferredColorScheme(.light)
+        // Follows the same Appearance setting instead of being locked to light.
+        .preferredColorScheme(
+            (AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme
+        )
     }
 }
