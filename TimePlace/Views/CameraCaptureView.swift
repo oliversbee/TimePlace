@@ -48,11 +48,11 @@ struct CameraCaptureView: View {
             toggleHaptic.prepare()
             camera.start()
         }
-        // Listen to session starting to enforce 1.0x zoom
         .onChange(of: camera.isSessionRunning) { isRunning in
             if isRunning {
+                // FIX: Force UI state to 1x and apply zoom when session starts
                 isUltraWideActive = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     applyZoom(1.0)
                 }
             }
@@ -67,14 +67,14 @@ struct CameraCaptureView: View {
     }
 
     private func applyZoom(_ factor: CGFloat) {
-        // Direct access to the property from CameraManager
         let device = camera.mainIsBack ? camera.backDevice : camera.frontDevice
         guard let device = device else { return }
         
         do {
             try device.lockForConfiguration()
             let clamped = max(device.minAvailableVideoZoomFactor, min(device.maxAvailableVideoZoomFactor, factor))
-            device.videoZoomFactor = clamped
+            // FIX: Use ramp instead of direct assignment for MultiCam sessions
+            device.ramp(toVideoZoomFactor: clamped, withRate: 30.0)
             device.unlockForConfiguration()
         } catch {
             print("Zoom error: \(error)")
@@ -147,7 +147,7 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // NATIVE SEGMENTED PICKER
+                // NATIVE SEGMENTED PICKER (Fix for the Pill UI)
                 Picker("Mode", selection: $camera.captureMode) {
                     Text("One").tag(CaptureMode.single)
                     Text("Both").tag(CaptureMode.both)
@@ -194,7 +194,6 @@ struct CameraCaptureView: View {
         }
     }
 
-    // Removed the 'Binding' errors by using direct state checks
     @ViewBuilder
     private var zoomToggle: some View {
         if camera.mainIsBack && camera.isUltraWideAvailable {

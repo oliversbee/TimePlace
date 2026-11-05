@@ -30,14 +30,12 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var capturedMainImage: UIImage?
     @Published var capturedSecondaryImage: UIImage?
     
-    // Tells the view if the ultra-wide lens exists
     @Published private(set) var isUltraWideAvailable = false
 
     let session = AVCaptureMultiCamSession()
     let backPreviewLayer: AVCaptureVideoPreviewLayer
     let frontPreviewLayer: AVCaptureVideoPreviewLayer
 
-    // Exposed (readable) to the View so it can handle zoom
     private(set) var backDevice: AVCaptureDevice?
     private(set) var frontDevice: AVCaptureDevice?
 
@@ -80,10 +78,10 @@ final class CameraManager: NSObject, ObservableObject {
                 self.session.startRunning()
                 let running = self.session.isRunning
                 
-                // FIX: Force zoom to 1.0x immediately after the session starts running
+                // FIX: Use ramp instead of direct assignment. MultiCam sessions often ignore direct assignments.
                 if let device = self.backDevice {
                     try? device.lockForConfiguration()
-                    device.videoZoomFactor = 1.0
+                    device.ramp(toVideoZoomFactor: 1.0, withRate: 30.0)
                     device.unlockForConfiguration()
                 }
                 
@@ -128,7 +126,6 @@ final class CameraManager: NSObject, ObservableObject {
             
             let torchAvailable = backDevice?.hasTorch ?? false
             
-            // FIX: Reliably check if the physical ultra-wide lens exists on this phone
             let discovery = AVCaptureDevice.DiscoverySession(
                 deviceTypes: [.builtInUltraWideCamera],
                 mediaType: .video,
