@@ -14,7 +14,6 @@ struct CameraCaptureView: View {
     private let pipTrailingInset: CGFloat = 20
     private let pipBottomInset: CGFloat = 140
 
-    // Defaults to false (1x). True means 0.5x is active.
     @State private var isUltraWideActive: Bool = false
     
     private let shutterHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -51,7 +50,7 @@ struct CameraCaptureView: View {
         }
         .onDisappear { camera.stop() }
         .onChange(of: camera.mainIsBack) { _ in
-            // Reset zoom when swapping cameras
+            // Reset zoom when flipping to front camera
             isUltraWideActive = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 applyZoom(1.0, animated: false)
@@ -65,11 +64,6 @@ struct CameraCaptureView: View {
         let position: AVCaptureDevice.Position = camera.mainIsBack ? .back : .front
         let inputs = session.inputs.compactMap { $0 as? AVCaptureDeviceInput }
         return inputs.first { $0.device.position == position }?.device
-    }
-
-    private var hasUltraWide: Bool {
-        guard camera.mainIsBack else { return false }
-        return camera.isUltraWideAvailable
     }
 
     private func applyZoom(_ factor: CGFloat, animated: Bool) {
@@ -89,7 +83,9 @@ struct CameraCaptureView: View {
     }
 
     private func toggleZoom() {
-        // If active, go to 1.0. If not, go to 0.5
+        // Only apply zoom if we are on the back camera
+        guard camera.mainIsBack else { return }
+        
         let target: CGFloat = isUltraWideActive ? 1.0 : 0.5
         applyZoom(target, animated: true)
         isUltraWideActive.toggle()
@@ -153,7 +149,7 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // Original Pill-Style Toggle with Haptics
+                // Native iOS Pill-Shape Toggle
                 HStack(spacing: 0) {
                     Button {
                         if camera.captureMode != .single {
@@ -161,16 +157,18 @@ struct CameraCaptureView: View {
                             toggleHaptic.selectionChanged()
                         }
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             Image(systemName: "square")
+                                .font(.system(size: 12, weight: .medium))
                             Text("One")
+                                .font(.system(size: 14, weight: .semibold))
                         }
-                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(camera.captureMode == .single ? .black : .white)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(camera.captureMode == .single ? Color.white : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
 
@@ -180,22 +178,24 @@ struct CameraCaptureView: View {
                             toggleHaptic.selectionChanged()
                         }
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             Image(systemName: "square.split.2x1")
+                                .font(.system(size: 12, weight: .medium))
                             Text("Both")
+                                .font(.system(size: 14, weight: .semibold))
                         }
-                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(camera.captureMode == .both ? .black : .white)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(camera.captureMode == .both ? Color.white : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(4)
-                .background(Color(white: 0.15).opacity(0.8))
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .padding(3)
+                .background(Color(white: 0.2).opacity(0.8))
+                .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -233,19 +233,22 @@ struct CameraCaptureView: View {
         }
     }
 
-    // Little Circle Toggle above the shutter
+    // Only shows if the main camera is the back camera AND ultra-wide hardware exists
     @ViewBuilder
     private var zoomToggle: some View {
-        if hasUltraWide {
+        if camera.mainIsBack && camera.isUltraWideAvailable {
             Button {
                 toggleZoom()
             } label: {
                 Text(isUltraWideActive ? "0.5x" : "1x")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(isUltraWideActive ? .black : .white)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .background(
                         Circle().fill(isUltraWideActive ? Color.yellow : Color.white.opacity(0.2))
+                    )
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
