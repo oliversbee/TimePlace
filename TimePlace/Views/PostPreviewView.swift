@@ -16,9 +16,27 @@ struct PostPreviewView: View {
 
     private let uniformCornerRadius: CGFloat = 24
 
+    // Adaptive Cream Colors
+    private var creamBackground: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.11, green: 0.10, blue: 0.09, alpha: 1.0) // Dark warm gray
+                : UIColor(red: 0.98, green: 0.96, blue: 0.92, alpha: 1.0) // Cream
+        })
+    }
+    
+    private var retakeButtonBackground: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.20, green: 0.18, blue: 0.16, alpha: 1.0)
+                : UIColor(red: 0.92, green: 0.89, blue: 0.84, alpha: 1.0)
+        })
+    }
+
     var body: some View {
         ZStack {
-            Color(UIColor.systemBackground)
+            // Custom Cream Background
+            creamBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -75,6 +93,7 @@ struct PostPreviewView: View {
     private var controls: some View {
         HStack(spacing: 16) {
             
+            // Retake Button
             Button(action: onRetake) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.counterclockwise")
@@ -85,12 +104,13 @@ struct PostPreviewView: View {
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(retakeButtonBackground)
                 .clipShape(RoundedRectangle(cornerRadius: uniformCornerRadius, style: .continuous))
             }
             .disabled(isUploading)
             .opacity(isUploading ? 0.5 : 1.0)
 
+            // Upload Button
             Button {
                 upload()
             } label: {

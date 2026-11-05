@@ -14,6 +14,7 @@ struct CameraCaptureView: View {
     private let pipTrailingInset: CGFloat = 20
     private let pipBottomInset: CGFloat = 140
 
+    // Defaults to false (1x). True means 0.5x is active.
     @State private var isUltraWideActive: Bool = false
     
     private let shutterHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -50,6 +51,7 @@ struct CameraCaptureView: View {
         }
         .onDisappear { camera.stop() }
         .onChange(of: camera.mainIsBack) { _ in
+            // Reset zoom when swapping cameras
             isUltraWideActive = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 applyZoom(1.0, animated: false)
@@ -65,7 +67,6 @@ struct CameraCaptureView: View {
         return inputs.first { $0.device.position == position }?.device
     }
 
-    // Fixed: Explicitly return Bool
     private var hasUltraWide: Bool {
         guard camera.mainIsBack else { return false }
         return camera.isUltraWideAvailable
@@ -87,7 +88,8 @@ struct CameraCaptureView: View {
         }
     }
 
-    private func toggleUltraWide() {
+    private func toggleZoom() {
+        // If active, go to 1.0. If not, go to 0.5
         let target: CGFloat = isUltraWideActive ? 1.0 : 0.5
         applyZoom(target, animated: true)
         isUltraWideActive.toggle()
@@ -151,7 +153,7 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // Inline CaptureModeToggle with Haptics
+                // Original Pill-Style Toggle with Haptics
                 HStack(spacing: 0) {
                     Button {
                         if camera.captureMode != .single {
@@ -231,17 +233,20 @@ struct CameraCaptureView: View {
         }
     }
 
+    // Little Circle Toggle above the shutter
     @ViewBuilder
     private var zoomToggle: some View {
         if hasUltraWide {
             Button {
-                toggleUltraWide()
+                toggleZoom()
             } label: {
-                Text("0.5x")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                Text(isUltraWideActive ? "0.5x" : "1x")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(isUltraWideActive ? .black : .white)
-                    .frame(width: 52, height: 34)
-                    .background(Capsule().fill(isUltraWideActive ? Color.yellow : Color.white.opacity(0.15)))
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle().fill(isUltraWideActive ? Color.yellow : Color.white.opacity(0.2))
+                    )
             }
             .buttonStyle(.plain)
         }
