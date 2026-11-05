@@ -10,7 +10,10 @@ struct HouseholdMembersView: View {
 
     @State private var members: [HouseholdMember] = []
     @State private var nicknames: [UUID: String] = [:]
-    @State private var hiddenUsers: Set<UUID> = []
+    
+    // Tracks which member is currently being edited and their draft name
+    @State private var editingMemberId: UUID? = nil
+    @State private var draftNickname: String = ""
 
     @State private var isLoadingMembers = false
     @State private var showingLeaveConfirmation = false
@@ -32,238 +35,145 @@ struct HouseholdMembersView: View {
         Form {
 
             // MARK: Household
-
             Section {
-
                 HStack {
-
                     Text("Join Code")
-
                     Spacer()
-
                     Text(household.joinCode)
-                        .font(
-                            .system(
-                                .body,
-                                design: .monospaced
-                            )
-                        )
+                        .font(.system(.body, design: .monospaced))
                         .foregroundColor(.gray)
                 }
             }
 
             // MARK: Members
-
             Section("Members") {
 
                 if isLoadingMembers {
-
                     HStack {
                         Spacer()
-
                         ProgressView()
-
                         Spacer()
                     }
-
                 } else if otherMembers.isEmpty {
-
                     Text("No members to display.")
                         .foregroundColor(.gray)
-
                 } else {
-
                     ForEach(otherMembers) { member in
-
                         HStack {
-                            // Inline Name TextField
-                            TextField(
-                                "Name",
-                                text: Binding(
-                                    get: {
-                                        displayName(for: member)
-                                    },
-                                    set: { newName in
-                                        nicknames[member.userId] = newName
-                                    }
-                                ),
-                                onCommit: {
-                                    let currentName = nicknames[member.userId] ?? ""
-                                    Task {
-                                        let success = await manager.setNickname(
-                                            targetUserId: member.userId,
-                                            nickname: currentName
-                                        )
-                                        if !success {
-                                            // Revert or reload on failure
-                                            await loadMembers()
-                                        }
-                                    }
+                            if editingMemberId == member.userId {
+                                // Editing Mode
+                                TextField("Name", text: $draftNickname)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Button {
+                                    saveNickname(for: member)
+                                } label: {
+                                    // Changed to right-pointing arrow
+                                    Image(systemName: "arrow.right.circle.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.blue)
                                 }
-                            )
-                            .foregroundColor(.primary)
-
-                            Spacer()
-
-                            // Toggle: ON = Visible, OFF = Hidden
-                            Toggle(
-                                "Visible",
-                                isOn: Binding(
-                                    get: {
-                                        !hiddenUsers.contains(member.userId)
-                                    },
-                                    set: { isVisible in
-                                        Task {
-                                            if isVisible {
-                                                await unhide(member)
-                                            } else {
-                                                await hide(member)
-                                            }
-                                        }
-                                    }
-                                )
-                            )
-                            .labelsHidden()
+                                .buttonStyle(.plain)
+                                
+                            } else {
+                                // View Mode
+                                Text(displayName(for: member))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Button {
+                                    editingMemberId = member.userId
+                                    draftNickname = displayName(for: member)
+                                } label: {
+                                    Image(systemName: "pencil")
+                                        .foregroundColor(.gray)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
             }
 
             // MARK: Leave
-
             Section {
-
-                Button(
-                    "Leave Household",
-                    role: .destructive
-                ) {
+                Button("Leave Household", role: .destructive) {
                     showingLeaveConfirmation = true
                 }
             }
         }
-
         .navigationTitle(household.name)
         .navigationBarTitleDisplayMode(.inline)
-
-        // MARK: Load
-
         .task {
             await loadMembers()
         }
-
-        // MARK: Leave Confirmation
-
-        .alert(
-            "Leave Household?",
-            isPresented: $showingLeaveConfirmation
-        ) {
-
-            Button(
-                "Leave",
-                role: .destructive
-            ) {
-
+        .alert("Leave Household?", isPresented: $showingLeaveConfirmation) {
+            Button("Leave", role: .destructive) {
                 Task {
                     await leaveHousehold()
                 }
             }
-
-            Button(
-                "Cancel",
-                role: .cancel
-            ) {}
-
+            Button("Cancel", role: .cancel) {}
         } message: {
-
-            Text(
-                "You will be removed from \(household.name)."
-            )
+            Text("You will be removed from \(household.name).")
         }
     }
 
     // MARK: - Display Name
 
-    private func displayName(
-        for member: HouseholdMember
-    ) -> String {
-
-        if let nickname = nicknames[member.userId],
-           !nickname.isEmpty {
+    private func displayName(for member: HouseholdMember) -> String {
+        if let nickname = nicknames[member.userId], !nickname.isEmpty {
             return nickname
         }
-
         return member.name ?? "Unnamed User"
     }
 
     // MARK: - Load Members
 
     private func loadMembers() async {
-
         isLoadingMembers = true
 
-        let loadedMembers =
-            await manager.fetchHouseholdMembers(
-                householdId: household.id
-            )
-
-        let loadedNicknames =
-            await manager.fetchNicknames()
-
-        let loadedHiddenUsers =
-            await manager.fetchHiddenUsers()
+        let loadedMembers = await manager.fetchHouseholdMembers(householdId: household.id)
+        let loadedNicknames = await manager.fetchNicknames()
 
         members = loadedMembers
         nicknames = loadedNicknames
-        hiddenUsers = loadedHiddenUsers
 
         isLoadingMembers = false
     }
 
-    // MARK: - Hide
-
-    private func hide(
-        _ member: HouseholdMember
-    ) async {
-
-        let success =
-            await manager.hideUser(
-                targetUserId: member.userId
+    // MARK: - Save Nickname
+    
+    private func saveNickname(for member: HouseholdMember) {
+        Task {
+            let success = await manager.setNickname(
+                targetUserId: member.userId,
+                nickname: draftNickname
             )
-
-        if success {
-            hiddenUsers.insert(
-                member.userId
-            )
-        }
-    }
-
-    // MARK: - Unhide
-
-    private func unhide(
-        _ member: HouseholdMember
-    ) async {
-
-        let success =
-            await manager.unhideUser(
-                targetUserId: member.userId
-            )
-
-        if success {
-            hiddenUsers.remove(
-                member.userId
-            )
+            
+            if success {
+                await MainActor.run {
+                    nicknames[member.userId] = draftNickname
+                    editingMemberId = nil // Reverts the arrow back to the pencil
+                }
+            } else {
+                // Optionally reload on failure to revert state
+                await loadMembers()
+                await MainActor.run {
+                    editingMemberId = nil
+                }
+            }
         }
     }
 
     // MARK: - Leave
 
     private func leaveHousehold() async {
-
-        _ = await manager.leaveHousehold(
-            householdId: household.id
-        )
+        _ = await manager.leaveHousehold(householdId: household.id)
         
-        // Automatically close the window after leaving
         await MainActor.run {
             dismiss()
         }

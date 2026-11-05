@@ -2,14 +2,11 @@ import SwiftUI
 
 struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
-    @EnvironmentObject var viewModel: SettingsViewModel
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
 
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
-
-    let intervalOptions = [60, 300, 600, 1800, 3600]
 
     private var appearanceBinding: Binding<AppearanceMode> {
         Binding(
@@ -20,52 +17,22 @@ struct PreferencesSettingsView: View {
 
     var body: some View {
         Form {
-            if let error = viewModel.errorMessage {
-                Section {
-                    Text(error).foregroundColor(.red)
-                }
-            }
-
-            Section("Display Settings") {
-                TextField("Display Name", text: $viewModel.displayName)
-                    .onSubmit { saveChanges() }
-
-                Toggle(
-                    "Show My Own Photos",
-                    isOn: Binding(
-                        get: { viewModel.showOwnImage },
-                        set: { newValue in
-                            viewModel.showOwnImage = newValue
-                            saveChanges()
-                        }
-                    )
-                )
-
-                Picker(
-                    "Image Swap Interval",
-                    selection: Binding(
-                        get: { viewModel.imageIntervalSeconds },
-                        set: { newValue in
-                            viewModel.imageIntervalSeconds = newValue
-                            saveChanges()
-                        }
-                    )
-                ) {
-                    ForEach(intervalOptions, id: \.self) { seconds in
-                        Text(intervalString(for: seconds)).tag(seconds)
-                    }
-                }
-            }
-
             Section("Appearance") {
+                // Filtered to remove the .system (Automatic) option
                 Picker("Theme", selection: appearanceBinding) {
-                    ForEach(AppearanceMode.allCases) { mode in
+                    ForEach(AppearanceMode.allCases.filter { $0 != .system }) { mode in
                         Label(mode.label, systemImage: mode.icon).tag(mode)
                     }
                 }
             }
-
-            Section {
+        }
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(appearanceBinding.wrappedValue.colorScheme)
+        // Pinned to the bottom
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Divider()
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
@@ -74,18 +41,21 @@ struct PreferencesSettingsView: View {
                             ProgressView()
                             Text("Deleting…")
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                     } else {
                         Text("Delete Account")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
                     }
                 }
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding()
+                .background(Color(UIColor.systemGroupedBackground))
                 .disabled(isDeleting)
-            } footer: {
-                Text("Your photos, household memberships, and paired frames will be permanently removed after a 30‑day grace period. You'll be signed out immediately.")
             }
         }
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
-        .preferredColorScheme(appearanceBinding.wrappedValue.colorScheme)
         .alert("Delete Account?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -97,22 +67,6 @@ struct PreferencesSettingsView: View {
             }
         } message: {
             Text("This is permanent. Your account will be scheduled for deletion and you'll be signed out now.")
-        }
-    }
-
-    private func saveChanges() {
-        if let userId = auth.userId {
-            Task { await viewModel.savePreferences(currentUserId: userId) }
-        }
-    }
-
-    private func intervalString(for seconds: Int) -> String {
-        let minutes = seconds / 60
-        if minutes < 60 {
-            return "\(minutes) min\(minutes == 1 ? "" : "s")"
-        } else {
-            let hours = minutes / 60
-            return "\(hours) hour\(hours == 1 ? "" : "s")"
         }
     }
 }
