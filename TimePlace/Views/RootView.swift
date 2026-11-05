@@ -2,10 +2,20 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var auth: AuthManager
-    @Environment(\.scenePhase) private var scenePhase // NEW: Listen to app lifecycle
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var systemColorScheme // NEW
     
-    // Listen to the theme globally
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+
+    // NEW: Computed property to fix the "Auto" mode bug
+    private var resolvedColorScheme: ColorScheme {
+        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
+        switch mode {
+        case .system: return systemColorScheme
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
 
     var body: some View {
         Group {
@@ -15,17 +25,15 @@ struct RootView: View {
             } else if auth.isAuthenticated {
                 CaptureHomeView()
                     .onAppear {
-                        // Request notification permission once they are logged in and reach the camera
                         NotificationManager.shared.requestAuthorization()
                     }
             } else {
                 LoginView()
             }
         }
-        // Apply the preferred color scheme to everything
-        .preferredColorScheme(AppearanceMode(rawValue: appearanceRaw)?.colorScheme)
+        // CHANGED: Use the resolved scheme instead of the raw enum
+        .preferredColorScheme(resolvedColorScheme)
         .onChange(of: scenePhase) { newPhase in
-            // When the app comes back to the foreground, top up the 7-day schedule
             if newPhase == .active && auth.isAuthenticated {
                 NotificationManager.shared.scheduleUpcomingPrompts()
             }

@@ -7,6 +7,7 @@ struct SettingsView: View {
 
     // Needed so the light/dark toggle from the Profile page updates this screen live.
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+    @Environment(\.colorScheme) private var systemColorScheme // NEW
 
     @StateObject private var settingsViewModel = SettingsViewModel()
 
@@ -19,6 +20,16 @@ struct SettingsView: View {
 
     @State private var showCreateHouseholdAlert = false
     @State private var newHouseholdName = ""
+
+    // NEW: Fix for Auto mode getting stuck
+    private var resolvedColorScheme: ColorScheme {
+        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
+        switch mode {
+        case .system: return systemColorScheme
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -142,7 +153,7 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: - Account / Profile (NEW)
+                // MARK: - Account / Profile
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink {
                         PreferencesSettingsView()
@@ -174,11 +185,8 @@ struct SettingsView: View {
                 }
             }
         }
-        // Replaces the previous hard-coded `.preferredColorScheme(.light)`
-        // so the Profile → Appearance toggle works here.
-        .preferredColorScheme(
-            (AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme
-        )
+        // CHANGED: Use the resolved scheme to fix Auto mode
+        .preferredColorScheme(resolvedColorScheme)
         .sheet(isPresented: $showAddFrameSheet) {
             AddFrameView()
                 .environmentObject(householdManager)
@@ -250,8 +258,19 @@ struct AddFrameView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+    @Environment(\.colorScheme) private var systemColorScheme // NEW
 
     @State private var deviceClaimCode = ""
+
+    // NEW: Fix for Auto mode getting stuck
+    private var resolvedColorScheme: ColorScheme {
+        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
+        switch mode {
+        case .system: return systemColorScheme
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -295,9 +314,7 @@ struct AddFrameView: View {
                 }
             }
         }
-        // Follows the same Appearance setting instead of being locked to light.
-        .preferredColorScheme(
-            (AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme
-        )
+        // CHANGED: Use the resolved scheme to fix Auto mode
+        .preferredColorScheme(resolvedColorScheme)
     }
 }

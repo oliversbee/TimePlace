@@ -4,7 +4,17 @@ struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
+    @Environment(\.colorScheme) private var systemColorScheme // NEW
 
+    // NEW
+    private var resolvedColorScheme: ColorScheme {
+        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
+        switch mode {
+        case .system: return systemColorScheme
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
 
@@ -42,7 +52,7 @@ struct PreferencesSettingsView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .preferredColorScheme(appearanceBinding.wrappedValue.colorScheme)
+        .preferredColorScheme(resolvedColorScheme)
         // Pinned to the bottom
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
