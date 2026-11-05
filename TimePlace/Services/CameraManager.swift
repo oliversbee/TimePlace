@@ -30,13 +30,14 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var capturedMainImage: UIImage?
     @Published var capturedSecondaryImage: UIImage?
     
+    // Tells the view if the ultra-wide lens exists
     @Published private(set) var isUltraWideAvailable = false
 
     let session = AVCaptureMultiCamSession()
     let backPreviewLayer: AVCaptureVideoPreviewLayer
     let frontPreviewLayer: AVCaptureVideoPreviewLayer
 
-    // Expose the actual virtual devices so the view can adjust zoom correctly
+    // Exposed (readable) to the View so it can handle zoom
     private(set) var backDevice: AVCaptureDevice?
     private(set) var frontDevice: AVCaptureDevice?
 
@@ -78,6 +79,14 @@ final class CameraManager: NSObject, ObservableObject {
                 guard !self.session.isRunning else { return }
                 self.session.startRunning()
                 let running = self.session.isRunning
+                
+                // FIX: Force zoom to 1.0x immediately after the session starts running
+                if let device = self.backDevice {
+                    try? device.lockForConfiguration()
+                    device.videoZoomFactor = 1.0
+                    device.unlockForConfiguration()
+                }
+                
                 DispatchQueue.main.async { self.isSessionRunning = running }
             }
         }
@@ -117,15 +126,15 @@ final class CameraManager: NSObject, ObservableObject {
             session.commitConfiguration()
             isConfigured = true
             
-            // FIX: Force zoom back to 1.0x immediately after setup
-            if let device = backDevice {
-                try? device.lockForConfiguration()
-                device.videoZoomFactor = 1.0
-                device.unlockForConfiguration()
-            }
-            
             let torchAvailable = backDevice?.hasTorch ?? false
-            let hasUltraWideHardware = backDevice?.minAvailableVideoZoomFactor ?? 1.0 <= 0.5 + 0.001
+            
+            // FIX: Reliably check if the physical ultra-wide lens exists on this phone
+            let discovery = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [.builtInUltraWideCamera],
+                mediaType: .video,
+                position: .back
+            )
+            let hasUltraWideHardware = !discovery.devices.isEmpty
             
             DispatchQueue.main.async {
                 self.isTorchAvailable = torchAvailable

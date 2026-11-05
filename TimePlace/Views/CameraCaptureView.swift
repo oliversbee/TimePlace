@@ -47,11 +47,14 @@ struct CameraCaptureView: View {
             shutterHaptic.prepare()
             toggleHaptic.prepare()
             camera.start()
-            
-            // Force UI state to 1x and apply hardware zoom
-            isUltraWideActive = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                applyZoom(1.0)
+        }
+        // Listen to session starting to enforce 1.0x zoom
+        .onChange(of: camera.isSessionRunning) { isRunning in
+            if isRunning {
+                isUltraWideActive = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    applyZoom(1.0)
+                }
             }
         }
         .onDisappear { camera.stop() }
@@ -64,8 +67,9 @@ struct CameraCaptureView: View {
     }
 
     private func applyZoom(_ factor: CGFloat) {
-        // Use the actual device from CameraManager, not the session inputs
-        guard let device = camera.mainIsBack ? camera.backDevice : camera.frontDevice else { return }
+        // Direct access to the property from CameraManager
+        let device = camera.mainIsBack ? camera.backDevice : camera.frontDevice
+        guard let device = device else { return }
         
         do {
             try device.lockForConfiguration()
@@ -73,7 +77,7 @@ struct CameraCaptureView: View {
             device.videoZoomFactor = clamped
             device.unlockForConfiguration()
         } catch {
-            print("Zoom configuration error:", error)
+            print("Zoom error: \(error)")
         }
     }
 
@@ -143,43 +147,16 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // CUSTOM DARK NATIVE-LOOKING PILL
-                HStack(spacing: 0) {
-                    Button {
-                        if camera.captureMode != .single {
-                            camera.captureMode = .single
-                            toggleHaptic.selectionChanged()
-                        }
-                    } label: {
-                        Text("One")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(camera.captureMode == .single ? .black : .white)
-                            .frame(width: 70, height: 32)
-                            .background(
-                                Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        if camera.captureMode != .both {
-                            camera.captureMode = .both
-                            toggleHaptic.selectionChanged()
-                        }
-                    } label: {
-                        Text("Both")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(camera.captureMode == .both ? .black : .white)
-                            .frame(width: 70, height: 32)
-                            .background(
-                                Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
+                // NATIVE SEGMENTED PICKER
+                Picker("Mode", selection: $camera.captureMode) {
+                    Text("One").tag(CaptureMode.single)
+                    Text("Both").tag(CaptureMode.both)
                 }
-                .padding(2)
-                .background(Color(white: 0.2).opacity(0.9))
-                .clipShape(Capsule())
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+                .onChange(of: camera.captureMode) { _ in
+                    toggleHaptic.selectionChanged()
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -217,6 +194,7 @@ struct CameraCaptureView: View {
         }
     }
 
+    // Removed the 'Binding' errors by using direct state checks
     @ViewBuilder
     private var zoomToggle: some View {
         if camera.mainIsBack && camera.isUltraWideAvailable {
