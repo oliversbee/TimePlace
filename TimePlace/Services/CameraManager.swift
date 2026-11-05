@@ -29,6 +29,9 @@ final class CameraManager: NSObject, ObservableObject {
     @Published private(set) var isScreenFlashing = false
     @Published var capturedMainImage: UIImage?
     @Published var capturedSecondaryImage: UIImage?
+    
+    // NEW: Tells the view if the ultra-wide lens is available
+    @Published private(set) var isUltraWideAvailable = false
 
     let session = AVCaptureMultiCamSession()
     let backPreviewLayer: AVCaptureVideoPreviewLayer
@@ -114,9 +117,14 @@ final class CameraManager: NSObject, ObservableObject {
             try addFrontCamera()
             session.commitConfiguration()
             isConfigured = true
+            
             let torchAvailable = backDevice?.hasTorch ?? false
+            // Determine if ultra wide is available (min zoom <= 0.5)
+            let ultraWide = (backDevice?.minAvailableVideoZoomFactor ?? 1.0) <= 0.5 + 0.001
+            
             DispatchQueue.main.async {
                 self.isTorchAvailable = torchAvailable
+                self.isUltraWideAvailable = ultraWide
                 self.errorMessage = nil
             }
         } catch {
@@ -128,11 +136,14 @@ final class CameraManager: NSObject, ObservableObject {
     }
 
     private func addBackCamera() throws {
-        // FIXED: Use Dual Wide camera to support 0.5x ultra-wide zoom
-        let device = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back)
-            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-
-        guard let device = device,
+        // FIXED: Use DiscoverySession to reliably find the virtual camera with 0.5x zoom
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInDualWideCamera, .builtInTripleCamera, .builtInWideAngleCamera],
+            mediaType: .video,
+            position: .back
+        )
+        
+        guard let device = discovery.devices.first,
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
             throw CameraError.setupFailed
