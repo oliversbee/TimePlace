@@ -14,6 +14,9 @@ struct HouseholdMembersView: View {
     // Tracks which member is currently being edited and their draft name
     @State private var editingMemberId: UUID? = nil
     @State private var draftNickname: String = ""
+    
+    // Automatically manages the keyboard focus
+    @FocusState private var focusedMemberId: UUID?
 
     @State private var isLoadingMembers = false
     @State private var showingLeaveConfirmation = false
@@ -64,13 +67,16 @@ struct HouseholdMembersView: View {
                                 // Editing Mode
                                 TextField("Name", text: $draftNickname)
                                     .foregroundColor(.primary)
+                                    .focused($focusedMemberId, equals: member.userId)
+                                    .onSubmit {
+                                        saveNickname(for: member)
+                                    }
                                 
                                 Spacer()
                                 
                                 Button {
                                     saveNickname(for: member)
                                 } label: {
-                                    // Changed to right-pointing arrow
                                     Image(systemName: "arrow.right.circle.fill")
                                         .font(.title3)
                                         .foregroundColor(.blue)
@@ -87,6 +93,11 @@ struct HouseholdMembersView: View {
                                 Button {
                                     editingMemberId = member.userId
                                     draftNickname = displayName(for: member)
+                                    
+                                    // Slight delay ensures the TextField is rendered before focusing
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        focusedMemberId = member.userId
+                                    }
                                 } label: {
                                     Image(systemName: "pencil")
                                         .foregroundColor(.gray)
@@ -148,6 +159,9 @@ struct HouseholdMembersView: View {
     // MARK: - Save Nickname
     
     private func saveNickname(for member: HouseholdMember) {
+        // Dismiss keyboard
+        focusedMemberId = nil
+        
         Task {
             let success = await manager.setNickname(
                 targetUserId: member.userId,
