@@ -2,11 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var auth: AuthManager
+    
+    // Listen to the theme globally
+    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
 
     var body: some View {
         Group {
             if auth.isInitializing {
-                // Show a black screen while checking the session
                 Color.black
                     .ignoresSafeArea()
             } else if auth.isAuthenticated {
@@ -15,5 +17,7 @@ struct RootView: View {
                 LoginView()
             }
         }
+        // Apply the preferred color scheme to everything
+        .preferredColorScheme(AppearanceMode(rawValue: appearanceRaw)?.colorScheme)
     }
 }
