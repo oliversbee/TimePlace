@@ -140,7 +140,7 @@ struct CameraCaptureView: View {
                             toggleHaptic.selectionChanged()
                         }
                     } label: {
-                        Text("One")
+                        Text("Single")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(camera.captureMode == .single ? .black : .white)
                             .frame(width: 70, height: 32)
@@ -156,7 +156,7 @@ struct CameraCaptureView: View {
                             toggleHaptic.selectionChanged()
                         }
                     } label: {
-                        Text("Both")
+                        Text("Multi")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(camera.captureMode == .both ? .black : .white)
                             .frame(width: 70, height: 32)
