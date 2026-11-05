@@ -4,17 +4,8 @@ struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.colorScheme) private var systemColorScheme // NEW
+    @Environment(\.systemColorScheme) private var systemColorScheme // CHANGED: Uses custom key
 
-    // NEW
-    private var resolvedColorScheme: ColorScheme {
-        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
-        switch mode {
-        case .system: return systemColorScheme
-        case .light:  return .light
-        case .dark:   return .dark
-        }
-    }
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
 
@@ -25,9 +16,17 @@ struct PreferencesSettingsView: View {
         )
     }
 
+    private var resolvedColorScheme: ColorScheme {
+        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
+        switch mode {
+        case .system: return systemColorScheme
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+
     var body: some View {
         Form {
-            // Account deletion errors
             if let message = auth.errorMessage {
                 Section {
                     Text(message).foregroundColor(.red)
@@ -35,7 +34,6 @@ struct PreferencesSettingsView: View {
             }
 
             Section("Appearance") {
-                // CHANGED: Removed the filter so "Automatic" is included
                 Picker("Theme", selection: appearanceBinding) {
                     ForEach(AppearanceMode.allCases) { mode in
                         Label(mode.label, systemImage: mode.icon).tag(mode)
@@ -43,7 +41,6 @@ struct PreferencesSettingsView: View {
                 }
             }
             
-            // Cleaned up Legal & Support section
             Section("About") {
                 NavigationLink("Legal & Support") {
                     LegalSupportView()
@@ -53,7 +50,6 @@ struct PreferencesSettingsView: View {
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(resolvedColorScheme)
-        // Pinned to the bottom
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 Divider()
@@ -95,7 +91,6 @@ struct PreferencesSettingsView: View {
     }
 }
 
-// NEW: The nested view for the legal links
 struct LegalSupportView: View {
     var body: some View {
         Form {

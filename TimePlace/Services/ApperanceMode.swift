@@ -23,7 +23,6 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
         }
     }
 
-    /// `nil` = follow system
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -39,5 +38,17 @@ enum AppearanceStorage {
     static var current: AppearanceMode {
         let raw = UserDefaults.standard.string(forKey: key) ?? AppearanceMode.system.rawValue
         return AppearanceMode(rawValue: raw) ?? .system
+    }
+}
+
+// NEW: Add this custom Environment Key to pass the true system theme down
+private struct SystemColorSchemeKey: EnvironmentKey {
+    static let defaultValue: ColorScheme = .light
+}
+
+extension EnvironmentValues {
+    var systemColorScheme: ColorScheme {
+        get { self[SystemColorSchemeKey.self] }
+        set { self[SystemColorSchemeKey.self] = newValue }
     }
 }

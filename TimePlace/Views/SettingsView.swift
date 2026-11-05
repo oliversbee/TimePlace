@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     // Needed so the light/dark toggle from the Profile page updates this screen live.
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.colorScheme) private var systemColorScheme // NEW
+    @Environment(\.systemColorScheme) private var systemColorScheme // CHANGED
 
     @StateObject private var settingsViewModel = SettingsViewModel()
 
@@ -258,7 +258,7 @@ struct AddFrameView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.colorScheme) private var systemColorScheme // NEW
+    @Environment(\.systemColorScheme) private var systemColorScheme // CHANGED
 
     @State private var deviceClaimCode = ""
 
