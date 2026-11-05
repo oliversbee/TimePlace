@@ -140,20 +140,16 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            // Inside SettingsView struct, in the .toolbar modifier:
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
+                // CHANGED: Replaced the custom "Back" chevron with a standard "Done" button
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
                         dismiss()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 17, weight: .semibold))
-                            Text("Back")
-                        }
                     }
                 }
 
-                // MARK: - Account / Profile
+                // Account / Profile
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink {
                         PreferencesSettingsView()
@@ -163,7 +159,7 @@ struct SettingsView: View {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 20, weight: .regular))
                     }
-                    .accessibilityLabel("Account")
+                    .accessibilityLabel("Account Settings") // NEW: Accessibility label
                 }
             }
             .safeAreaInset(edge: .bottom) {

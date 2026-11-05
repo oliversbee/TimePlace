@@ -51,7 +51,6 @@ struct CameraCaptureView: View {
         }
         .onChange(of: camera.isSessionRunning) { isRunning in
             if isRunning {
-                // Reset UI state and enforce 1.0x zoom on the camera
                 isUltraWideActive = false
                 camera.setZoom(factor: 1.0)
             }
@@ -65,18 +64,14 @@ struct CameraCaptureView: View {
 
     private func toggleZoom() {
         guard camera.mainIsBack, camera.isUltraWideAvailable else { return }
-        
         let newState = !isUltraWideActive
         isUltraWideActive = newState
-        
         let factor: CGFloat = newState ? 0.5 : 1.0
         camera.setZoom(factor: factor)
-        
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func swapMainCamera() {
-        // Do nothing if multi-cam is not supported
         guard camera.isMultiCamSupported else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         camera.swapMain()
@@ -130,11 +125,14 @@ struct CameraCaptureView: View {
             ZStack(alignment: .center) {
                 HStack {
                     GlassIconButton(systemName: "gearshape.fill", action: onOpenMenu)
+                        .accessibilityLabel("Settings") // NEW
+                    
                     Spacer()
+                    
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
+                        .accessibilityLabel("Toggle Flash") // NEW
                 }
                 
-                // Only show the Single/Multi toggle if the device supports it
                 if camera.isMultiCamSupported {
                     HStack(spacing: 0) {
                         Button {
@@ -144,7 +142,7 @@ struct CameraCaptureView: View {
                             }
                         } label: {
                             Text("Single")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.subheadline.weight(.semibold)) // CHANGED: Dynamic Type
                                 .foregroundColor(camera.captureMode == .single ? .black : .white)
                                 .frame(width: 70, height: 32)
                                 .background(
@@ -160,7 +158,7 @@ struct CameraCaptureView: View {
                             }
                         } label: {
                             Text("Multi")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.subheadline.weight(.semibold)) // CHANGED: Dynamic Type
                                 .foregroundColor(camera.captureMode == .both ? .black : .white)
                                 .frame(width: 70, height: 32)
                                 .background(
@@ -189,9 +187,9 @@ struct CameraCaptureView: View {
                 ZStack(alignment: .center) {
                     HStack {
                         Spacer()
-                        // Only show flip camera button if Multi-Cam is supported
                         if camera.isMultiCamSupported {
                             GlassIconButton(systemName: "arrow.triangle.2.circlepath.camera", action: swapMainCamera)
+                                .accessibilityLabel("Flip Camera") // NEW
                         }
                     }
                     .padding(.horizontal, 20)
@@ -207,6 +205,7 @@ struct CameraCaptureView: View {
                             .overlay(Circle().fill(.white).frame(width: 64, height: 64))
                     }
                     .buttonStyle(ShutterPressStyle())
+                    .accessibilityLabel("Take Photo") // NEW
                 }
             }
             .padding(.bottom, 40)
@@ -220,7 +219,7 @@ struct CameraCaptureView: View {
                 toggleZoom()
             } label: {
                 Text(isUltraWideActive ? "0.5x" : "1x")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(.caption, design: .rounded).weight(.bold)) // CHANGED: Dynamic Type
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
                     .background(
@@ -231,6 +230,7 @@ struct CameraCaptureView: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isUltraWideActive ? "Switch to 1x zoom" : "Switch to 0.5x zoom") // NEW
         }
     }
 }

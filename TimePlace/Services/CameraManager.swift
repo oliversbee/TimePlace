@@ -60,6 +60,7 @@ final class CameraManager: NSObject, ObservableObject {
     
     private let logger = Logger(subsystem: "com.timeplace.app", category: "Camera")
 
+    
     override init() {
         if AVCaptureMultiCamSession.isMultiCamSupported {
             session = AVCaptureMultiCamSession()
@@ -72,6 +73,15 @@ final class CameraManager: NSObject, ObservableObject {
         super.init()
         backPreviewLayer.videoGravity = .resizeAspectFill
         frontPreviewLayer.videoGravity = .resizeAspectFill
+        
+        // NEW: Restore brightness if the app goes to the background during a flash
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.endFlash()
+        }
     }
 
     func start() {
