@@ -47,10 +47,14 @@ struct CameraCaptureView: View {
             shutterHaptic.prepare()
             toggleHaptic.prepare()
             camera.start()
+            
+            // Ensure zoom is 1.0x on first appear
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                applyZoom(1.0, animated: false)
+            }
         }
         .onDisappear { camera.stop() }
         .onChange(of: camera.mainIsBack) { _ in
-            // Reset zoom when flipping to front camera
             isUltraWideActive = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 applyZoom(1.0, animated: false)
@@ -83,13 +87,17 @@ struct CameraCaptureView: View {
     }
 
     private func toggleZoom() {
-        // Only apply zoom if we are on the back camera
-        guard camera.mainIsBack else { return }
+        guard camera.mainIsBack, let device = currentZoomDevice else { return }
         
+        // Determine target zoom based on current state
         let target: CGFloat = isUltraWideActive ? 1.0 : 0.5
-        applyZoom(target, animated: true)
-        isUltraWideActive.toggle()
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        
+        // Check if the target is actually supported by the hardware before changing UI
+        if target >= device.minAvailableVideoZoomFactor {
+            applyZoom(target, animated: true)
+            isUltraWideActive.toggle()
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
     }
 
     private func swapMainCamera() {
@@ -149,53 +157,16 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // Native iOS Pill-Shape Toggle
-                HStack(spacing: 0) {
-                    Button {
-                        if camera.captureMode != .single {
-                            camera.captureMode = .single
-                            toggleHaptic.selectionChanged()
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("One")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .foregroundColor(camera.captureMode == .single ? .black : .white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(camera.captureMode == .single ? Color.white : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        if camera.captureMode != .both {
-                            camera.captureMode = .both
-                            toggleHaptic.selectionChanged()
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.split.2x1")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("Both")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .foregroundColor(camera.captureMode == .both ? .black : .white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(camera.captureMode == .both ? Color.white : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
+                // NATIVE PICKER STYLE
+                Picker("Mode", selection: $camera.captureMode) {
+                    Text("One").tag(CaptureMode.single)
+                    Text("Both").tag(CaptureMode.both)
                 }
-                .padding(3)
-                .background(Color(white: 0.2).opacity(0.8))
-                .clipShape(Capsule())
+                .pickerStyle(.segmented)
+                .frame(width: 140) // Adjust width as needed
+                .onChange(of: camera.captureMode) { _ in
+                    toggleHaptic.selectionChanged()
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 50)
@@ -233,7 +204,7 @@ struct CameraCaptureView: View {
         }
     }
 
-    // Only shows if the main camera is the back camera AND ultra-wide hardware exists
+    // Only shows if back camera is main AND hardware supports it
     @ViewBuilder
     private var zoomToggle: some View {
         if camera.mainIsBack && camera.isUltraWideAvailable {

@@ -30,7 +30,6 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var capturedMainImage: UIImage?
     @Published var capturedSecondaryImage: UIImage?
     
-    // This is the property that was missing!
     @Published private(set) var isUltraWideAvailable = false
 
     let session = AVCaptureMultiCamSession()
@@ -93,12 +92,9 @@ final class CameraManager: NSObject, ObservableObject {
 
     private func requestAccess(completion: @escaping (Bool) -> Void) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            completion(true)
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { granted in completion(granted) }
-        default:
-            completion(false)
+        case .authorized: completion(true)
+        case .notDetermined: AVCaptureDevice.requestAccess(for: .video) { granted in completion(granted) }
+        default: completion(false)
         }
     }
 
@@ -118,12 +114,22 @@ final class CameraManager: NSObject, ObservableObject {
             session.commitConfiguration()
             isConfigured = true
             
+            // FIX: Force zoom to 1.0x immediately on setup so it doesn't default to 0.5x
+            if let device = backDevice {
+                try? device.lockForConfiguration()
+                device.videoZoomFactor = 1.0
+                device.unlockForConfiguration()
+            }
+            
             let torchAvailable = backDevice?.hasTorch ?? false
-            let ultraWide = (backDevice?.minAvailableVideoZoomFactor ?? 1.0) <= 0.5 + 0.001
+            
+            // Check for physical hardware existence of the ultra-wide lens
+            let ultraWideDevice = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
+            let hasUltraWideHardware = ultraWideDevice != nil
             
             DispatchQueue.main.async {
                 self.isTorchAvailable = torchAvailable
-                self.isUltraWideAvailable = ultraWide
+                self.isUltraWideAvailable = hasUltraWideHardware
                 self.errorMessage = nil
             }
         } catch {
