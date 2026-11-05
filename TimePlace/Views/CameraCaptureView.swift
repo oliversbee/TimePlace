@@ -104,7 +104,9 @@ struct CameraCaptureView: View {
     /// The AVCaptureDevice backing the currently active main camera.
     private var currentZoomDevice: AVCaptureDevice? {
         let layer = camera.mainIsBack ? camera.backPreviewLayer : camera.frontPreviewLayer
-        guard let session = layer?.session else { return nil }
+        
+        // FIXED: Removed optional chaining '?' because layer is non-optional
+        guard let session = layer.session else { return nil }
 
         let position: AVCaptureDevice.Position = camera.mainIsBack ? .back : .front
         let inputs = session.inputs.compactMap { $0 as? AVCaptureDeviceInput }
@@ -153,7 +155,7 @@ struct CameraCaptureView: View {
     }
 
     // =====================================================================
-    // PiP SIZING  (unchanged)
+    // PiP SIZING
     // =====================================================================
 
     private func pipSize(for previewLayer: AVCaptureVideoPreviewLayer?) -> CGSize {

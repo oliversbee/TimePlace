@@ -48,4 +48,21 @@ final class AuthManager: ObservableObject {
         isAuthenticated = false
         userId = nil
     }
+
+    // MARK: - Dummy Account Deletion
+    func deleteAccount() async {
+        isLoading = true
+        errorMessage = nil
+        
+        // Placeholder logic: Simulate network request
+        print("Placeholder: Account deletion requested for user \(userId?.uuidString ?? "unknown")")
+        
+        // Simulate a short delay so the UI shows the loading state
+        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+        
+        // For now, just sign the user out to complete the UI flow
+        await signOut()
+        
+        isLoading = false
+    }
 }
