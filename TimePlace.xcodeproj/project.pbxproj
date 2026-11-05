@@ -21,18 +21,16 @@
 		95AA9B87A64FA1075E4C5DEB /* CameraCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48085747B0ACE3898D268FA4 /* CameraCaptureView.swift */; };
 		A5676C416181775FF88B6B55 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF764DA7C4939D4DCB41E57E /* NotificationManager.swift */; };
 		E69CEB0030333B5C00244552 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEAFF30333B5C00244552 /* SettingsView.swift */; };
-		E69CEB0330333BA400244552 /* CapturedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0130333BA400244552 /* CapturedImage.swift */; };
+		E69CEB0330333BA400244552 /* NewImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0130333BA400244552 /* NewImage.swift */; };
 		E69CEB0430333BA400244552 /* UserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0230333BA400244552 /* UserPreferences.swift */; };
-		E69CEB0930337A7F00244552 /* DevicesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0530337A7F00244552 /* DevicesSettingsView.swift */; };
 		E69CEB0A30337A7F00244552 /* DisplayConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0630337A7F00244552 /* DisplayConfigView.swift */; };
 		E69CEB0B30337A7F00244552 /* HouseholdsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0730337A7F00244552 /* HouseholdsSettingsView.swift */; };
 		E69CEB0C30337A7F00244552 /* PreferencesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0830337A7F00244552 /* PreferencesSettingsView.swift */; };
 		E69CEB0F3034B43500244552 /* HouseholdManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0D3034B43500244552 /* HouseholdManager.swift */; };
 		E69CEB103034B43500244552 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB0E3034B43500244552 /* SettingsViewModel.swift */; };
-		E69CEB133035CE8300244552 /* HouseholdMemebersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB113035CE8300244552 /* HouseholdMemebersView.swift */; };
-		E69CEB143035CE8300244552 /* RenameMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB123035CE8300244552 /* RenameMemberView.swift */; };
+		E69CEB133035CE8300244552 /* HouseholdMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB113035CE8300244552 /* HouseholdMembersView.swift */; };
 		E69CEB1C3064339B00244552 /* GlassControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB1B3064339B00244552 /* GlassControls.swift */; };
-		E69CEB34309CC63600244552 /* ApperanceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB33309CC63600244552 /* ApperanceMode.swift */; };
+		E69CEB34309CC63600244552 /* AppearanceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB33309CC63600244552 /* AppearanceMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,18 +46,16 @@
 		9F6EFA24B51F60F945929358 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		CF764DA7C4939D4DCB41E57E /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		E69CEAFF30333B5C00244552 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		E69CEB0130333BA400244552 /* CapturedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturedImage.swift; sourceTree = "<group>"; };
+		E69CEB0130333BA400244552 /* NewImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewImage.swift; sourceTree = "<group>"; };
 		E69CEB0230333BA400244552 /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
-		E69CEB0530337A7F00244552 /* DevicesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesSettingsView.swift; sourceTree = "<group>"; };
 		E69CEB0630337A7F00244552 /* DisplayConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayConfigView.swift; sourceTree = "<group>"; };
 		E69CEB0730337A7F00244552 /* HouseholdsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdsSettingsView.swift; sourceTree = "<group>"; };
 		E69CEB0830337A7F00244552 /* PreferencesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesSettingsView.swift; sourceTree = "<group>"; };
 		E69CEB0D3034B43500244552 /* HouseholdManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdManager.swift; sourceTree = "<group>"; };
 		E69CEB0E3034B43500244552 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
-		E69CEB113035CE8300244552 /* HouseholdMemebersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdMemebersView.swift; sourceTree = "<group>"; };
-		E69CEB123035CE8300244552 /* RenameMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameMemberView.swift; sourceTree = "<group>"; };
+		E69CEB113035CE8300244552 /* HouseholdMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdMembersView.swift; sourceTree = "<group>"; };
 		E69CEB1B3064339B00244552 /* GlassControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassControls.swift; sourceTree = "<group>"; };
-		E69CEB33309CC63600244552 /* ApperanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApperanceMode.swift; sourceTree = "<group>"; };
+		E69CEB33309CC63600244552 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
 		EECE7559137474D36B575CA7 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 		F32F67457F02770FC4BDB596 /* TimePlace.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimePlace.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3533C1C4ABE33883CE84BB3 /* TimePlaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePlaceApp.swift; sourceTree = "<group>"; };
@@ -89,7 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				E69CEB1B3064339B00244552 /* GlassControls.swift */,
-				E69CEB0130333BA400244552 /* CapturedImage.swift */,
+				E69CEB0130333BA400244552 /* NewImage.swift */,
 				E69CEB0230333BA400244552 /* UserPreferences.swift */,
 			);
 			path = Models;
@@ -114,7 +110,7 @@
 		A1D1154E352CD0C42D4F4E2D /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				E69CEB33309CC63600244552 /* ApperanceMode.swift */,
+				E69CEB33309CC63600244552 /* AppearanceMode.swift */,
 				E69CEB0D3034B43500244552 /* HouseholdManager.swift */,
 				E69CEB0E3034B43500244552 /* SettingsViewModel.swift */,
 				0F3214676F1E404E9D9A31FF /* AuthManager.swift */,
@@ -128,9 +124,7 @@
 		A3B142E3B7AC9C30B72C2E65 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				E69CEB113035CE8300244552 /* HouseholdMemebersView.swift */,
-				E69CEB123035CE8300244552 /* RenameMemberView.swift */,
-				E69CEB0530337A7F00244552 /* DevicesSettingsView.swift */,
+				E69CEB113035CE8300244552 /* HouseholdMembersView.swift */,
 				E69CEB0630337A7F00244552 /* DisplayConfigView.swift */,
 				E69CEB0730337A7F00244552 /* HouseholdsSettingsView.swift */,
 				E69CEB0830337A7F00244552 /* PreferencesSettingsView.swift */,
@@ -227,16 +221,14 @@
 				8D247716C6C00704DE45D3DC /* AuthManager.swift in Sources */,
 				95AA9B87A64FA1075E4C5DEB /* CameraCaptureView.swift in Sources */,
 				603F51715908246183970AC4 /* CameraManager.swift in Sources */,
-				E69CEB133035CE8300244552 /* HouseholdMemebersView.swift in Sources */,
-				E69CEB143035CE8300244552 /* RenameMemberView.swift in Sources */,
+				E69CEB133035CE8300244552 /* HouseholdMembersView.swift in Sources */,
 				39E45858194F9F5736CB6703 /* CameraPreview.swift in Sources */,
 				09B5752BAD97E8A371263067 /* CaptureHomeView.swift in Sources */,
-				E69CEB0330333BA400244552 /* CapturedImage.swift in Sources */,
+				E69CEB0330333BA400244552 /* NewImage.swift in Sources */,
 				E69CEB0430333BA400244552 /* UserPreferences.swift in Sources */,
 				38975B3BE3B949EDFC69B636 /* LoginView.swift in Sources */,
 				A5676C416181775FF88B6B55 /* NotificationManager.swift in Sources */,
-				E69CEB0930337A7F00244552 /* DevicesSettingsView.swift in Sources */,
-				E69CEB34309CC63600244552 /* ApperanceMode.swift in Sources */,
+				E69CEB34309CC63600244552 /* AppearanceMode.swift in Sources */,
 				E69CEB0A30337A7F00244552 /* DisplayConfigView.swift in Sources */,
 				E69CEB0B30337A7F00244552 /* HouseholdsSettingsView.swift in Sources */,
 				E69CEB0F3034B43500244552 /* HouseholdManager.swift in Sources */,
