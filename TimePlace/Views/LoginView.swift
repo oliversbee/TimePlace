@@ -11,7 +11,7 @@ struct LoginView: View {
 
             Text("Time+Place")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(.white) // Restored to white
 
             VStack(spacing: 12) {
                 TextField("Email", text: $email)
@@ -52,6 +52,7 @@ struct LoginView: View {
             Spacer()
             Spacer()
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(Color.black.ignoresSafeArea()) // Restored to black
+        .preferredColorScheme(.dark) // NEW: Forces the keyboard and text fields to be dark too
     }
 }

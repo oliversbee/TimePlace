@@ -25,8 +25,9 @@ struct PreferencesSettingsView: View {
             }
 
             Section("Appearance") {
+                // CHANGED: Removed the filter so "Automatic" is included
                 Picker("Theme", selection: appearanceBinding) {
-                    ForEach(AppearanceMode.allCases.filter { $0 != .system }) { mode in
+                    ForEach(AppearanceMode.allCases) { mode in
                         Label(mode.label, systemImage: mode.icon).tag(mode)
                     }
                 }

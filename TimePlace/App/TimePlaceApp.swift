@@ -8,7 +8,7 @@ struct TimePlaceApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(auth)
-                .preferredColorScheme(.dark)
+                // REMOVED: .preferredColorScheme(.dark)
         }
     }
 }
