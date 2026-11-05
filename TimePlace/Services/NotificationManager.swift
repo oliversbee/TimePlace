@@ -24,6 +24,11 @@ final class NotificationManager: NSObject, ObservableObject {
         }
     }
 
+    func cancelAllPrompts() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+    }
+
     /// Fills in any missing days (up to `daysToSchedule` ahead) with a
     /// freshly-randomized notification time. Safe to call repeatedly —
     /// it won't duplicate a day that's already scheduled.

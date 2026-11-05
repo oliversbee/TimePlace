@@ -17,6 +17,11 @@ struct PreferencesSettingsView: View {
 
     var body: some View {
         Form {
+            if let message = auth.errorMessage {
+                Section {
+                    Text(message).foregroundColor(.red)
+                }
+            }
             Section("Appearance") {
                 // Filtered to remove the .system (Automatic) option
                 Picker("Theme", selection: appearanceBinding) {
@@ -66,7 +71,7 @@ struct PreferencesSettingsView: View {
                 }
             }
         } message: {
-            Text("This is permanent. Your account will be scheduled for deletion and you'll be signed out now.")
+            Text("This permanently deletes your account, your photos and your household memberships. This can't be undone.")
         }
     }
 }

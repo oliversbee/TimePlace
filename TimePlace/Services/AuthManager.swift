@@ -49,20 +49,25 @@ final class AuthManager: ObservableObject {
         userId = nil
     }
 
-    // MARK: - Dummy Account Deletion
     func deleteAccount() async {
         isLoading = true
         errorMessage = nil
-        
-        // Placeholder logic: Simulate network request
-        print("Placeholder: Account deletion requested for user \(userId?.uuidString ?? "unknown")")
-        
-        // Simulate a short delay so the UI shows the loading state
-        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-        
-        // For now, just sign the user out to complete the UI flow
-        await signOut()
-        
+
+        do {
+            // Runs server-side under the service-role key; the token in the
+            // request identifies whose account is being deleted.
+            _ = try await client.functions.invoke("delete-account")
+
+            // Server user is gone; clear local session and pending reminders.
+            NotificationManager.shared.cancelAllPrompts()
+            try? await client.auth.signOut(scope: .local)
+
+            isAuthenticated = false
+            userId = nil
+        } catch {
+            errorMessage = "We couldn't delete your account. Please try again, or contact support."
+        }
+
         isLoading = false
     }
 }
