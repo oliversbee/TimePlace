@@ -32,6 +32,7 @@
 		E69CEB133035CE8300244552 /* HouseholdMemebersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB113035CE8300244552 /* HouseholdMemebersView.swift */; };
 		E69CEB143035CE8300244552 /* RenameMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB123035CE8300244552 /* RenameMemberView.swift */; };
 		E69CEB1C3064339B00244552 /* GlassControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB1B3064339B00244552 /* GlassControls.swift */; };
+		E69CEB34309CC63600244552 /* ApperanceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB33309CC63600244552 /* ApperanceMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +59,7 @@
 		E69CEB113035CE8300244552 /* HouseholdMemebersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdMemebersView.swift; sourceTree = "<group>"; };
 		E69CEB123035CE8300244552 /* RenameMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameMemberView.swift; sourceTree = "<group>"; };
 		E69CEB1B3064339B00244552 /* GlassControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassControls.swift; sourceTree = "<group>"; };
+		E69CEB33309CC63600244552 /* ApperanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApperanceMode.swift; sourceTree = "<group>"; };
 		EECE7559137474D36B575CA7 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 		F32F67457F02770FC4BDB596 /* TimePlace.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimePlace.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3533C1C4ABE33883CE84BB3 /* TimePlaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePlaceApp.swift; sourceTree = "<group>"; };
@@ -112,6 +114,7 @@
 		A1D1154E352CD0C42D4F4E2D /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				E69CEB33309CC63600244552 /* ApperanceMode.swift */,
 				E69CEB0D3034B43500244552 /* HouseholdManager.swift */,
 				E69CEB0E3034B43500244552 /* SettingsViewModel.swift */,
 				0F3214676F1E404E9D9A31FF /* AuthManager.swift */,
@@ -233,6 +236,7 @@
 				38975B3BE3B949EDFC69B636 /* LoginView.swift in Sources */,
 				A5676C416181775FF88B6B55 /* NotificationManager.swift in Sources */,
 				E69CEB0930337A7F00244552 /* DevicesSettingsView.swift in Sources */,
+				E69CEB34309CC63600244552 /* ApperanceMode.swift in Sources */,
 				E69CEB0A30337A7F00244552 /* DisplayConfigView.swift in Sources */,
 				E69CEB0B30337A7F00244552 /* HouseholdsSettingsView.swift in Sources */,
 				E69CEB0F3034B43500244552 /* HouseholdManager.swift in Sources */,
