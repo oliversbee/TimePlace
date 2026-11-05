@@ -30,7 +30,7 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var capturedMainImage: UIImage?
     @Published var capturedSecondaryImage: UIImage?
     
-    // NEW: Tells the view if the ultra-wide lens is available
+    // This is the property that was missing!
     @Published private(set) var isUltraWideAvailable = false
 
     let session = AVCaptureMultiCamSession()
@@ -119,7 +119,6 @@ final class CameraManager: NSObject, ObservableObject {
             isConfigured = true
             
             let torchAvailable = backDevice?.hasTorch ?? false
-            // Determine if ultra wide is available (min zoom <= 0.5)
             let ultraWide = (backDevice?.minAvailableVideoZoomFactor ?? 1.0) <= 0.5 + 0.001
             
             DispatchQueue.main.async {
@@ -136,7 +135,6 @@ final class CameraManager: NSObject, ObservableObject {
     }
 
     private func addBackCamera() throws {
-        // FIXED: Use DiscoverySession to reliably find the virtual camera with 0.5x zoom
         let discovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInDualWideCamera, .builtInTripleCamera, .builtInWideAngleCamera],
             mediaType: .video,

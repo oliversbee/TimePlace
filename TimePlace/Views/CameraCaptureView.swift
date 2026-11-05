@@ -16,7 +16,6 @@ struct CameraCaptureView: View {
 
     @State private var isUltraWideActive: Bool = false
     
-    // Haptics
     private let shutterHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let toggleHaptic = UISelectionFeedbackGenerator()
 
@@ -66,6 +65,7 @@ struct CameraCaptureView: View {
         return inputs.first { $0.device.position == position }?.device
     }
 
+    // Fixed: Explicitly return Bool
     private var hasUltraWide: Bool {
         guard camera.mainIsBack else { return false }
         return camera.isUltraWideAvailable
@@ -151,7 +151,7 @@ struct CameraCaptureView: View {
                     GlassIconButton(systemName: flashIcon, tint: camera.flashMode == .off ? .white : .yellow, action: camera.cycleFlashMode)
                 }
                 
-                // INLINE CAPTURE MODE TOGGLE WITH HAPTICS
+                // Inline CaptureModeToggle with Haptics
                 HStack(spacing: 0) {
                     Button {
                         if camera.captureMode != .single {
