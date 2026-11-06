@@ -49,6 +49,14 @@ struct LoginView: View {
             .padding(.horizontal, 32)
             .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
 
+            // Add this below your Log In button:
+            Text("By logging in, you agree to our Terms of Service and Privacy Policy.")
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.top, 10)
+
             Spacer()
             Spacer()
         }
