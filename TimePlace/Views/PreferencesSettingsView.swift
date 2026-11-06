@@ -4,41 +4,14 @@ struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
     @EnvironmentObject var viewModel: SettingsViewModel
 
-    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.systemColorScheme) private var systemColorScheme
-
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
-
-    private var appearanceBinding: Binding<AppearanceMode> {
-        Binding(
-            get: { AppearanceMode(rawValue: appearanceRaw) ?? .system },
-            set: { appearanceRaw = $0.rawValue }
-        )
-    }
-
-    private var resolvedColorScheme: ColorScheme {
-        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
-        switch mode {
-        case .system: return systemColorScheme
-        case .light:  return .light
-        case .dark:   return .dark
-        }
-    }
 
     var body: some View {
         Form {
             if let message = auth.errorMessage {
                 Section {
                     Text(message).foregroundColor(.red)
-                }
-            }
-
-            Section("Appearance") {
-                Picker("Theme", selection: appearanceBinding) {
-                    ForEach(AppearanceMode.allCases) { mode in
-                        Label(mode.label, systemImage: mode.icon).tag(mode)
-                    }
                 }
             }
             
@@ -58,7 +31,6 @@ struct PreferencesSettingsView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .preferredColorScheme(resolvedColorScheme)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 Divider()
@@ -135,7 +107,6 @@ struct BlockReportView: View {
                             
                             Spacer()
                             
-                            // NEW: Ellipsis Menu instead of swipe actions
                             Menu {
                                 Button {
                                     memberToReport = member

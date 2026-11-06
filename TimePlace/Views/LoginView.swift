@@ -11,7 +11,7 @@ struct LoginView: View {
 
             Text("Framed")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundColor(.white) // Restored to white
+                .foregroundColor(.primary) // CHANGED: Adapts to light/dark mode
 
             VStack(spacing: 12) {
                 TextField("Email", text: $email)
@@ -49,7 +49,7 @@ struct LoginView: View {
             .padding(.horizontal, 32)
             .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
 
-            // Add this below your Log In button:
+            // Legal Text
             Text("By logging in, you agree to our Terms of Service and Privacy Policy.")
                 .font(.caption2)
                 .foregroundColor(.gray)
@@ -60,7 +60,7 @@ struct LoginView: View {
             Spacer()
             Spacer()
         }
-        .background(Color.black.ignoresSafeArea()) // Restored to black
-        .preferredColorScheme(.dark) // NEW: Forces the keyboard and text fields to be dark too
+        .background(Color(UIColor.systemBackground).ignoresSafeArea()) // CHANGED: Adapts to light/dark mode
+        // REMOVED: .preferredColorScheme(.dark) (This was causing the stuck dark mode bug)
     }
 }

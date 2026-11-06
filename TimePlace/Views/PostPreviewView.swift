@@ -15,8 +15,6 @@ struct PostPreviewView: View {
     
     private let logger = Logger(subsystem: "com.timeplace.app", category: "Upload")
     
-    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-
     private let uniformCornerRadius: CGFloat = 24
 
     // Adaptive Cream Colors
@@ -68,7 +66,6 @@ struct PostPreviewView: View {
                     .padding(.bottom, 30)
             }
         }
-        .preferredColorScheme(AppearanceMode(rawValue: appearanceRaw)?.colorScheme)
     }
 
     private func secondaryImageView(image: UIImage) -> some View {
