@@ -11,6 +11,12 @@ struct FamilyMember: Identifiable, Codable {
     }
 }
 
+struct NewReport: Encodable {
+    let reporter_id: UUID
+    let reported_user_id: UUID
+    let reason: String
+}
+
 @MainActor
 final class SettingsViewModel: ObservableObject {
     @Published var displayName: String = ""
@@ -85,7 +91,7 @@ final class SettingsViewModel: ObservableObject {
         isSaving = false
     }
 
-    // MARK: - Hidden users
+    // MARK: - Hidden users (Blocking)
 
     func toggleHideUser(currentUserId: UUID, familyUserId: UUID) async {
         errorMessage = nil
@@ -99,7 +105,27 @@ final class SettingsViewModel: ObservableObject {
                 hiddenUserIds.insert(familyUserId)
             }
         } catch {
-            errorMessage = "We couldn't update the hidden users."
+            errorMessage = "We couldn't update the blocked status."
+        }
+    }
+
+    // MARK: - Reporting
+
+    func reportUser(currentUserId: UUID, targetId: UUID, reason: String) async -> Bool {
+        let finalReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        do {
+            try await supabase.client.from("reports").insert(
+                NewReport(
+                    reporter_id: currentUserId,
+                    reported_user_id: targetId,
+                    reason: finalReason.isEmpty ? "No reason provided" : finalReason
+                )
+            ).execute()
+            return true
+        } catch {
+            errorMessage = "We couldn't send your report. Please try again."
+            return false
         }
     }
 }
