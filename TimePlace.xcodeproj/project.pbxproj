@@ -31,6 +31,8 @@
 		E69CEB133035CE8300244552 /* HouseholdMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB113035CE8300244552 /* HouseholdMembersView.swift */; };
 		E69CEB1C3064339B00244552 /* GlassControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB1B3064339B00244552 /* GlassControls.swift */; };
 		E69CEB34309CC63600244552 /* AppearanceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69CEB33309CC63600244552 /* AppearanceMode.swift */; };
+		E69CEB3A309E2C5900244552 /* Assests.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E69CEB36309E299400244552 /* Assests.xcassets */; };
+		E69CEB3C309E2CAE00244552 /* PrivacyInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = E69CEB3B309E2CAE00244552 /* PrivacyInfo.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +59,7 @@
 		E69CEB1B3064339B00244552 /* GlassControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassControls.swift; sourceTree = "<group>"; };
 		E69CEB33309CC63600244552 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
 		E69CEB36309E299400244552 /* Assests.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assests.xcassets; sourceTree = "<group>"; };
+		E69CEB3B309E2CAE00244552 /* PrivacyInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.plist; sourceTree = "<group>"; };
 		EECE7559137474D36B575CA7 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 		F32F67457F02770FC4BDB596 /* TimePlace.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimePlace.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3533C1C4ABE33883CE84BB3 /* TimePlaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePlaceApp.swift; sourceTree = "<group>"; };
@@ -95,6 +98,7 @@
 		941B279CC2DDAF0EB57C94CE = {
 			isa = PBXGroup;
 			children = (
+				E69CEB3B309E2CAE00244552 /* PrivacyInfo.plist */,
 				E69CEB36309E299400244552 /* Assests.xcassets */,
 				F51F3EB9DEDFB531C9627AC8 /* TimePlace */,
 				E86AA6E9A9D7192DE9C9E420 /* Products */,
@@ -171,6 +175,7 @@
 			buildPhases = (
 				19FBD88A6AE67C6642C6825D /* Sources */,
 				C1CD5C90BBCE8367DCA66490 /* Frameworks */,
+				E69CEB39309E2C4F00244552 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -214,6 +219,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E69CEB39309E2C4F00244552 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E69CEB3A309E2C5900244552 /* Assests.xcassets in Resources */,
+				E69CEB3C309E2CAE00244552 /* PrivacyInfo.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		19FBD88A6AE67C6642C6825D /* Sources */ = {
