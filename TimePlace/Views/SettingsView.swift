@@ -5,31 +5,13 @@ struct SettingsView: View {
     @EnvironmentObject var householdManager: HouseholdManager
     @Environment(\.dismiss) private var dismiss
 
-    // Needed so the light/dark toggle from the Profile page updates this screen live.
-    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.systemColorScheme) private var systemColorScheme // CHANGED
-
     @StateObject private var settingsViewModel = SettingsViewModel()
 
-    // Sheet for Frame pairing
     @State private var showAddFrameSheet = false
-
-    // Alerts for Household logic
     @State private var showJoinHouseholdAlert = false
     @State private var joinCode = ""
-
     @State private var showCreateHouseholdAlert = false
     @State private var newHouseholdName = ""
-
-    // NEW: Fix for Auto mode getting stuck
-    private var resolvedColorScheme: ColorScheme {
-        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
-        switch mode {
-        case .system: return systemColorScheme
-        case .light:  return .light
-        case .dark:   return .dark
-        }
-    }
 
     var body: some View {
         NavigationStack {
@@ -40,7 +22,6 @@ struct SettingsView: View {
                         Text("No households joined yet.")
                             .foregroundColor(.secondary)
                     } else {
-                        // Show up to 3 households
                         ForEach(householdManager.households.prefix(3)) { h in
                             NavigationLink {
                                 HouseholdMembersView(
@@ -55,7 +36,6 @@ struct SettingsView: View {
                             }
                         }
 
-                        // View All Option (only if > 3)
                         if householdManager.households.count > 3 {
                             NavigationLink {
                                 HouseholdsSettingsView()
@@ -72,7 +52,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    // Join Household Button
                     Button {
                         showJoinHouseholdAlert = true
                     } label: {
@@ -85,7 +64,6 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                     }
 
-                    // Create Household Button
                     Button {
                         showCreateHouseholdAlert = true
                     } label: {
@@ -105,7 +83,6 @@ struct SettingsView: View {
                 if !householdManager.pairedDevices.isEmpty {
                     Section {
                         ForEach(householdManager.pairedDevices) { device in
-                            // Goes straight to DisplayConfigView
                             NavigationLink {
                                 DisplayConfigView(device: device)
                                     .environmentObject(auth)
@@ -140,16 +117,13 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            // Inside SettingsView struct, in the .toolbar modifier:
             .toolbar {
-                // CHANGED: Replaced the custom "Back" chevron with a standard "Done" button
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
                         dismiss()
                     }
                 }
 
-                // Account / Profile
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink {
                         PreferencesSettingsView()
@@ -159,7 +133,7 @@ struct SettingsView: View {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 20, weight: .regular))
                     }
-                    .accessibilityLabel("Account Settings") // NEW: Accessibility label
+                    .accessibilityLabel("Account Settings")
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -181,8 +155,6 @@ struct SettingsView: View {
                 }
             }
         }
-        // CHANGED: Use the resolved scheme to fix Auto mode
-        .preferredColorScheme(resolvedColorScheme)
         .sheet(isPresented: $showAddFrameSheet) {
             AddFrameView()
                 .environmentObject(householdManager)
@@ -253,20 +225,7 @@ struct AddFrameView: View {
     @EnvironmentObject var manager: HouseholdManager
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
-    @Environment(\.systemColorScheme) private var systemColorScheme // CHANGED
-
     @State private var deviceClaimCode = ""
-
-    // NEW: Fix for Auto mode getting stuck
-    private var resolvedColorScheme: ColorScheme {
-        let mode = AppearanceMode(rawValue: appearanceRaw) ?? .system
-        switch mode {
-        case .system: return systemColorScheme
-        case .light:  return .light
-        case .dark:   return .dark
-        }
-    }
 
     var body: some View {
         NavigationStack {
@@ -310,7 +269,5 @@ struct AddFrameView: View {
                 }
             }
         }
-        // CHANGED: Use the resolved scheme to fix Auto mode
-        .preferredColorScheme(resolvedColorScheme)
     }
 }
