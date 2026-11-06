@@ -195,9 +195,3 @@ struct HouseholdMembersView: View {
         }
     }
 }
-
-struct NewReport: Encodable {
-    let reporter_id: UUID
-    let reported_user_id: UUID
-    let reason: String
-}
