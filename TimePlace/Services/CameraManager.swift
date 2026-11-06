@@ -9,8 +9,8 @@ enum CameraError: Error {
 }
 
 enum CaptureMode: String, CaseIterable, Identifiable {
-    case both = "Both"
-    case single = "One"
+    case both = "Multi"
+    case single = "Single"
     var id: String { rawValue }
 }
 
@@ -58,7 +58,10 @@ final class CameraManager: NSObject, ObservableObject {
     private let flashWarmUp: TimeInterval = 0.22
     private let flashMaxDuration: TimeInterval = 3.0
     
-    private let logger = Logger(subsystem: "com.timeplace.app", category: "Camera")
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.framed.app",
+        category: "Camera"
+    )
 
     override init() {
         let multi = AVCaptureMultiCamSession.isMultiCamSupported

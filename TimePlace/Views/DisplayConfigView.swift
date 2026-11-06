@@ -1,6 +1,5 @@
 import SwiftUI
 
-// Enum to manage the Picker options cleanly
 enum DisplayIntervalOption: Hashable {
     case min1, min10, min30, hour1, custom
 }
@@ -8,8 +7,6 @@ enum DisplayIntervalOption: Hashable {
 struct DisplayConfigView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var auth: AuthManager
-    
-    // Uses the shared EnvironmentObject so data is consistent
     @EnvironmentObject var viewModel: SettingsViewModel
 
     let device: PairedDevice
@@ -17,9 +14,6 @@ struct DisplayConfigView: View {
     @State private var selectedInterval: DisplayIntervalOption = .min1
     @State private var customHours = 0
     @State private var customMinutes = 1
-    
-    // NEW: Prevents saving to the database while the screen is first loading
-    @State private var isInitializing = false
 
     var body: some View {
         NavigationStack {
@@ -30,7 +24,6 @@ struct DisplayConfigView: View {
                     }
                 }
 
-                // MARK: - Display Interval Time
                 Section(header: Text("Display Interval Time")) {
                     Picker("Interval", selection: $selectedInterval) {
                         Text("1 min").tag(DisplayIntervalOption.min1)
@@ -40,18 +33,18 @@ struct DisplayConfigView: View {
                         Text("Custom").tag(DisplayIntervalOption.custom)
                     }
                     .onChange(of: selectedInterval) { newValue in
-                        // NEW: Don't save if we are just loading the screen
-                        guard !isInitializing else { return }
-                        
-                        if let seconds = standardSeconds(for: newValue) {
-                            viewModel.imageIntervalSeconds = seconds
-                            savePreferences()
-                        } else {
+                        guard let seconds = standardSeconds(for: newValue) else {
                             updateCustomInterval()
+                            return
                         }
+                        
+                        // CHANGED: Skip saving if the selection hasn't actually changed
+                        guard seconds != viewModel.imageIntervalSeconds else { return }
+                        
+                        viewModel.imageIntervalSeconds = seconds
+                        savePreferences()
                     }
                     
-                    // Scroll Wheels for Custom Time
                     if selectedInterval == .custom {
                         HStack(spacing: 0) {
                             Picker("Hours", selection: $customHours) {
@@ -72,24 +65,22 @@ struct DisplayConfigView: View {
                             .frame(maxWidth: .infinity)
                             .clipped()
                         }
-                        .onChange(of: customHours) { _ in 
-                            guard !isInitializing else { return }
-                            updateCustomInterval() 
+                        .onChange(of: customHours) { _ in
+                            let total = (customHours * 3600) + (customMinutes * 60)
+                            if total != viewModel.imageIntervalSeconds { updateCustomInterval() }
                         }
-                        .onChange(of: customMinutes) { _ in 
-                            guard !isInitializing else { return }
-                            updateCustomInterval() 
+                        .onChange(of: customMinutes) { _ in
+                            let total = (customHours * 3600) + (customMinutes * 60)
+                            if total != viewModel.imageIntervalSeconds { updateCustomInterval() }
                         }
                     }
                 }
 
-                // MARK: - Visible Members on Screen
                 Section(header: Text("Visible Members on Screen")) {
                     if viewModel.familyMembers.isEmpty {
                         Text("No household members found.").foregroundColor(.gray)
                     } else {
                         ForEach(viewModel.familyMembers) { member in
-                            // Uses the assigned nickname, falls back to name
                             let displayName = viewModel.nicknames[member.id] ?? member.name
                             
                             Toggle(
@@ -118,23 +109,12 @@ struct DisplayConfigView: View {
             }
             .task {
                 if let userId = auth.userId {
-                    isInitializing = true // 1. Lock saving
-                    
                     await viewModel.loadData(currentUserId: userId)
-                    // REMOVED: viewModel.displayName = device.name (This was the bug!)
-                    
                     initializeIntervalSelection()
-                    
-                    // 2. Add a tiny delay before unlocking saving to ensure Picker settles
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isInitializing = false 
-                    }
                 }
             }
         }
     }
-    
-    // MARK: - Helper Functions
     
     private func standardSeconds(for option: DisplayIntervalOption) -> Int? {
         switch option {
@@ -161,7 +141,6 @@ struct DisplayConfigView: View {
     
     private func updateCustomInterval() {
         let totalSeconds = (customHours * 3600) + (customMinutes * 60)
-        // Ensure it's at least 1 minute to prevent 0 second intervals
         viewModel.imageIntervalSeconds = max(totalSeconds, 60)
         savePreferences()
     }

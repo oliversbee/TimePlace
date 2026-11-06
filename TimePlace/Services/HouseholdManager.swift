@@ -87,7 +87,10 @@ final class HouseholdManager: ObservableObject {
     @Published var errorMessage: String?
 
     private let client = SupabaseManager.shared.client
-    private let logger = Logger(subsystem: "com.timeplace.app", category: "Household")
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.framed.app",
+        category: "Household"
+    )
 
     var currentUserId: UUID? {
         client.auth.currentUser?.id

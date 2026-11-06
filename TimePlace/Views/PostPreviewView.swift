@@ -13,7 +13,10 @@ struct PostPreviewView: View {
     @State private var isUploading = false
     @State private var errorMessage: String?
     
-    private let logger = Logger(subsystem: "com.timeplace.app", category: "Upload")
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.framed.app",
+        category: "Upload"
+    )
     
     private let uniformCornerRadius: CGFloat = 24
 
