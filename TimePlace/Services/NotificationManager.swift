@@ -74,7 +74,7 @@ final class NotificationManager: NSObject, ObservableObject {
 
     private func schedule(identifier: String, date: Date) {
         let content = UNMutableNotificationContent()
-        content.title = "Time+Place"
+        content.title = "Framed"
         content.body = "Open the app and capture your moment."
         content.sound = .default
 

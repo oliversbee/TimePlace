@@ -9,7 +9,7 @@ struct LoginView: View {
         VStack(spacing: 20) {
             Spacer()
 
-            Text("Time+Place")
+            Text("Framed")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundColor(.white) // Restored to white
 
