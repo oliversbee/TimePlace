@@ -12,9 +12,15 @@ struct HouseholdMembersView: View {
     @State private var editingMemberId: UUID? = nil
     @State private var draftNickname: String = ""
     
+    // Safeguard State
     @State private var memberToReport: HouseholdMember?
     @State private var showReportAlert = false
     @State private var reportReason = ""
+    @State private var showReportSuccess = false
+    
+    @State private var memberToBlock: HouseholdMember?
+    @State private var showBlockConfirmation = false
+    @State private var blockSuccessMessage: String?
     
     @FocusState private var focusedMemberId: UUID?
 
@@ -80,19 +86,40 @@ struct HouseholdMembersView: View {
                                 
                                 Spacer()
                                 
-                                Button {
-                                    editingMemberId = member.userId
-                                    draftNickname = displayName(for: member)
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                        focusedMemberId = member.userId
+                                // NEW: Discoverable "..." menu for Report/Block
+                                Menu {
+                                    Button {
+                                        memberToReport = member
+                                        reportReason = ""
+                                        showReportAlert = true
+                                    } label: {
+                                        Label("Report User", systemImage: "exclamationmark.bubble")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        memberToBlock = member
+                                        showBlockConfirmation = true
+                                    } label: {
+                                        Label("Block User", systemImage: "hand.raised.slash")
+                                    }
+                                    
+                                    Button {
+                                        editingMemberId = member.userId
+                                        draftNickname = displayName(for: member)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                            focusedMemberId = member.userId
+                                        }
+                                    } label: {
+                                        Label("Edit Name", systemImage: "pencil")
                                     }
                                 } label: {
-                                    Image(systemName: "pencil")
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.title3)
                                         .foregroundColor(.gray)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
+                        // Keep swipe actions as a secondary method
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 memberToReport = member
@@ -103,7 +130,8 @@ struct HouseholdMembersView: View {
                             }
                             
                             Button {
-                                Task { _ = await manager.hideUser(targetUserId: member.userId) }
+                                memberToBlock = member
+                                showBlockConfirmation = true
                             } label: {
                                 Label("Block", systemImage: "hand.raised.slash")
                             }
@@ -122,6 +150,8 @@ struct HouseholdMembersView: View {
         .navigationTitle(household.name)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadMembers() }
+        
+        // Leave Alert
         .alert("Leave Household?", isPresented: $showingLeaveConfirmation) {
             Button("Leave", role: .destructive) {
                 Task { await leaveHousehold() }
@@ -130,12 +160,48 @@ struct HouseholdMembersView: View {
         } message: {
             Text("You will be removed from \(household.name).")
         }
+        
+        // Report Alert
         .alert("Report User", isPresented: $showReportAlert) {
             TextField("Reason", text: $reportReason)
             Button("Cancel", role: .cancel) { memberToReport = nil }
             Button("Submit", role: .destructive) { submitReport() }
         } message: {
-            Text("This will privately notify the developer.")
+            Text("This will privately notify the developer. You can also block this user.")
+        }
+        
+        // Block Confirmation
+        .confirmationDialog("Block User?", isPresented: $showBlockConfirmation, titleVisibility: .visible) {
+            Button("Block \(memberToBlock?.name ?? "User")", role: .destructive) {
+                if let userToBlock = memberToBlock {
+                    Task {
+                        let success = await manager.hideUser(targetUserId: userToBlock.userId)
+                        if success {
+                            blockSuccessMessage = "\(userToBlock.name ?? "User") has been blocked. Their photos will no longer appear on your frame."
+                        }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { memberToBlock = nil }
+        } message: {
+            Text("Their photos will no longer be shown on your display.")
+        }
+        
+        // Report Success Alert
+        .alert("Report Sent", isPresented: $showReportSuccess) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Thank you. We will review this report shortly.")
+        }
+        
+        // Block Success Alert
+        .alert("User Blocked", isPresented: Binding(
+            get: { blockSuccessMessage != nil },
+            set: { if !$0 { blockSuccessMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(blockSuccessMessage ?? "")
         }
     }
 
@@ -174,22 +240,33 @@ struct HouseholdMembersView: View {
     private func submitReport() {
         guard let userToReport = memberToReport, let currentUserId = manager.currentUserId else { return }
         let finalReason = reportReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        
         Task {
-            try? await SupabaseManager.shared.client.from("reports").insert(
-                NewReport(
-                    reporter_id: currentUserId,
-                    reported_user_id: userToReport.userId,
-                    reason: finalReason.isEmpty ? "No reason provided" : finalReason
-                )
-            ).execute()
-            await MainActor.run { memberToReport = nil }
+            do {
+                try await SupabaseManager.shared.client.from("reports").insert(
+                    NewReport(
+                        reporter_id: currentUserId,
+                        reported_user_id: userToReport.userId,
+                        reason: finalReason.isEmpty ? "No reason provided" : finalReason
+                    )
+                ).execute()
+                
+                await MainActor.run {
+                    memberToReport = nil
+                    showReportSuccess = true
+                }
+            } catch {
+                await MainActor.run {
+                    memberToReport = nil
+                    // Re-use manager error message for failure
+                    manager.errorMessage = "Couldn't send your report, please try again."
+                }
+            }
         }
     }
 
     private func leaveHousehold() async {
         let success = await manager.leaveHousehold(householdId: household.id)
-        
-        // CHANGED: Only dismiss the screen if the call was successful
         if success {
             await MainActor.run { dismiss() }
         }
