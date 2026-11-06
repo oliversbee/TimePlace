@@ -60,21 +60,23 @@ final class CameraManager: NSObject, ObservableObject {
     
     private let logger = Logger(subsystem: "com.timeplace.app", category: "Camera")
 
-    
     override init() {
-        if AVCaptureMultiCamSession.isMultiCamSupported {
-            session = AVCaptureMultiCamSession()
-        } else {
-            session = AVCaptureSession()
-        }
+        let multi = AVCaptureMultiCamSession.isMultiCamSupported
+        let s: AVCaptureSession = multi ? AVCaptureMultiCamSession() : AVCaptureSession()
+        session = s
         
-        backPreviewLayer = AVCaptureVideoPreviewLayer(sessionWithNoConnection: session)
-        frontPreviewLayer = AVCaptureVideoPreviewLayer(sessionWithNoConnection: session)
+        // FIX: Use standard initializer for non-multicam so it auto-connects
+        backPreviewLayer = multi
+            ? AVCaptureVideoPreviewLayer(sessionWithNoConnection: s)
+            : AVCaptureVideoPreviewLayer(session: s)
+            
+        frontPreviewLayer = AVCaptureVideoPreviewLayer(sessionWithNoConnection: s)
+        
         super.init()
         backPreviewLayer.videoGravity = .resizeAspectFill
         frontPreviewLayer.videoGravity = .resizeAspectFill
         
-        // NEW: Restore brightness if the app goes to the background during a flash
+        // Restore brightness if the app goes to the background during a flash
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
@@ -82,6 +84,11 @@ final class CameraManager: NSObject, ObservableObject {
         ) { [weak self] _ in
             self?.endFlash()
         }
+    }
+    
+    // FIX: Remove observer to prevent memory leaks
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func start() {
@@ -112,9 +119,6 @@ final class CameraManager: NSObject, ObservableObject {
             DispatchQueue.main.async { self.isSessionRunning = false }
         }
     }
-
-    // ... [Keep the rest of the Zoom/Switch logic exactly as you have it from Topic 5] ...
-    // (I'll include the whole file so it's easy to paste)
 
     private func restoreBackCameraInput(_ input: AVCaptureDeviceInput) {
         session.addInputWithNoConnections(input)
@@ -200,6 +204,8 @@ final class CameraManager: NSObject, ObservableObject {
             }
             session.addInput(newInput)
             if let connection = backOutput.connection(with: .video) { applyPortraitOrientation(to: connection) }
+            // FIX: Auto-created preview connection needs portrait orientation applied
+            if let previewConnection = backPreviewLayer.connection { applyPortraitOrientation(to: previewConnection) }
         }
 
         backInput = newInput
@@ -260,6 +266,8 @@ final class CameraManager: NSObject, ObservableObject {
         guard session.canAddOutput(backOutput) else { throw CameraError.setupFailed }
         session.addOutput(backOutput)
         if let connection = backOutput.connection(with: .video) { applyPortraitOrientation(to: connection) }
+        // FIX: Auto-created preview connection needs portrait orientation applied
+        if let previewConnection = backPreviewLayer.connection { applyPortraitOrientation(to: previewConnection) }
     }
 
     private func addBackCamera() throws {
@@ -468,7 +476,6 @@ final class CameraManager: NSObject, ObservableObject {
 
 extension CameraManager: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        // CHANGED: Log the error and show a UI message if the capture fails
         guard error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else {
             logger.error("Camera capture failed: \(error?.localizedDescription ?? "Unknown error")")
             
