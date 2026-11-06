@@ -96,7 +96,7 @@ struct LegalSupportView: View {
         Form {
             Section {
                 Link("Terms of Service", destination: URL(string: "https://oliversbee2.wixsite.com/framed/terms-of-service")!)
-                Link("Privacy Policy", destination: URL(string: "https://oliversbee2.wixsite.com/framed/privacy-policyy")!)
+                Link("Privacy Policy", destination: URL(string: "https://oliversbee2.wixsite.com/framed/privacy-policy")!)
             }
             
             Section {

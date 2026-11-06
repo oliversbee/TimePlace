@@ -56,6 +56,7 @@
 		E69CEB113035CE8300244552 /* HouseholdMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseholdMembersView.swift; sourceTree = "<group>"; };
 		E69CEB1B3064339B00244552 /* GlassControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassControls.swift; sourceTree = "<group>"; };
 		E69CEB33309CC63600244552 /* AppearanceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceMode.swift; sourceTree = "<group>"; };
+		E69CEB36309E299400244552 /* Assests.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assests.xcassets; sourceTree = "<group>"; };
 		EECE7559137474D36B575CA7 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 		F32F67457F02770FC4BDB596 /* TimePlace.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimePlace.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3533C1C4ABE33883CE84BB3 /* TimePlaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePlaceApp.swift; sourceTree = "<group>"; };
@@ -94,6 +95,7 @@
 		941B279CC2DDAF0EB57C94CE = {
 			isa = PBXGroup;
 			children = (
+				E69CEB36309E299400244552 /* Assests.xcassets */,
 				F51F3EB9DEDFB531C9627AC8 /* TimePlace */,
 				E86AA6E9A9D7192DE9C9E420 /* Products */,
 			);
