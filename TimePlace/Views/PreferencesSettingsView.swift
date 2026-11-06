@@ -95,12 +95,12 @@ struct LegalSupportView: View {
     var body: some View {
         Form {
             Section {
-                Link("Terms of Service", destination: URL(string: "https://yourdomain.com/terms")!)
-                Link("Privacy Policy", destination: URL(string: "https://yourdomain.com/privacy")!)
+                Link("Terms of Service", destination: URL(string: "https://oliversbee2.wixsite.com/framed/terms-of-service")!)
+                Link("Privacy Policy", destination: URL(string: "https://oliversbee2.wixsite.com/framed/privacy-policyy")!)
             }
             
             Section {
-                Link("Contact Support", destination: URL(string: "mailto:support@yourdomain.com")!)
+                Link("Contact Support", destination: URL(string: "mailto:beeapps1234@outlook.com")!)
             }
         }
         .navigationTitle("Legal & Support")
