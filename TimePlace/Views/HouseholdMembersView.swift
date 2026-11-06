@@ -12,10 +12,6 @@ struct HouseholdMembersView: View {
     @State private var editingMemberId: UUID? = nil
     @State private var draftNickname: String = ""
     
-    @State private var memberToReport: HouseholdMember?
-    @State private var showReportAlert = false
-    @State private var reportReason = ""
-    
     @FocusState private var focusedMemberId: UUID?
 
     @State private var isLoadingMembers = false
@@ -93,22 +89,6 @@ struct HouseholdMembersView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                memberToReport = member
-                                reportReason = ""
-                                showReportAlert = true
-                            } label: {
-                                Label("Report", systemImage: "exclamationmark.bubble")
-                            }
-                            
-                            Button {
-                                Task { _ = await manager.hideUser(targetUserId: member.userId) }
-                            } label: {
-                                Label("Block", systemImage: "hand.raised.slash")
-                            }
-                            .tint(.orange)
-                        }
                     }
                 }
             }
@@ -129,13 +109,6 @@ struct HouseholdMembersView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You will be removed from \(household.name).")
-        }
-        .alert("Report User", isPresented: $showReportAlert) {
-            TextField("Reason", text: $reportReason)
-            Button("Cancel", role: .cancel) { memberToReport = nil }
-            Button("Submit", role: .destructive) { submitReport() }
-        } message: {
-            Text("This will privately notify the developer.")
         }
     }
 
@@ -171,25 +144,10 @@ struct HouseholdMembersView: View {
         }
     }
 
-    private func submitReport() {
-        guard let userToReport = memberToReport, let currentUserId = manager.currentUserId else { return }
-        let finalReason = reportReason.trimmingCharacters(in: .whitespacesAndNewlines)
-        Task {
-            try? await SupabaseManager.shared.client.from("reports").insert(
-                NewReport(
-                    reporter_id: currentUserId,
-                    reported_user_id: userToReport.userId,
-                    reason: finalReason.isEmpty ? "No reason provided" : finalReason
-                )
-            ).execute()
-            await MainActor.run { memberToReport = nil }
-        }
-    }
-
     private func leaveHousehold() async {
         let success = await manager.leaveHousehold(householdId: household.id)
         
-        // CHANGED: Only dismiss the screen if the call was successful
+        // Only dismiss the screen if the call was successful
         if success {
             await MainActor.run { dismiss() }
         }
