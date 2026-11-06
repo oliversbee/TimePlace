@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
+    // NEW: We need to receive the settingsViewModel from SettingsView
+    @EnvironmentObject var viewModel: SettingsViewModel
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
     @Environment(\.systemColorScheme) private var systemColorScheme
@@ -41,12 +43,12 @@ struct PreferencesSettingsView: View {
                 }
             }
             
-            // NEW: Dedicated Safety Section
             Section("Safety") {
                 NavigationLink("Block & Report Users") {
                     BlockReportView()
                         .environmentObject(auth)
-                        // Need to pass the settingsViewModel here
+                        // NEW: Explicitly pass the viewModel to prevent the crash
+                        .environmentObject(viewModel) 
                 }
             }
             
