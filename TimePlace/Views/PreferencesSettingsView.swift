@@ -2,7 +2,6 @@ import SwiftUI
 
 struct PreferencesSettingsView: View {
     @EnvironmentObject var auth: AuthManager
-    // NEW: We need to receive the settingsViewModel from SettingsView
     @EnvironmentObject var viewModel: SettingsViewModel
 
     @AppStorage(AppearanceStorage.key) private var appearanceRaw: String = AppearanceMode.system.rawValue
@@ -47,7 +46,6 @@ struct PreferencesSettingsView: View {
                 NavigationLink("Block & Report Users") {
                     BlockReportView()
                         .environmentObject(auth)
-                        // NEW: Explicitly pass the viewModel to prevent the crash
                         .environmentObject(viewModel) 
                 }
             }
@@ -102,7 +100,7 @@ struct PreferencesSettingsView: View {
     }
 }
 
-// MARK: - New Block/Report View
+// MARK: - Block/Report View
 struct BlockReportView: View {
     @EnvironmentObject var viewModel: SettingsViewModel
     @EnvironmentObject var auth: AuthManager
@@ -127,45 +125,51 @@ struct BlockReportView: View {
                     ForEach(viewModel.familyMembers) { member in
                         HStack {
                             Text(member.name.isEmpty ? "Unnamed User" : member.name)
-                            Spacer()
                             
                             if viewModel.hiddenUserIds.contains(member.id) {
                                 Text("Blocked")
                                     .font(.caption)
                                     .foregroundColor(.red)
-                            }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                memberToReport = member
-                                reportReason = ""
-                                showReportAlert = true
-                            } label: {
-                                Label("Report", systemImage: "exclamationmark.bubble")
+                                    .padding(.leading, 4)
                             }
                             
-                            if viewModel.hiddenUserIds.contains(member.id) {
+                            Spacer()
+                            
+                            // NEW: Ellipsis Menu instead of swipe actions
+                            Menu {
                                 Button {
-                                    Task {
-                                        if let uid = auth.userId {
-                                            await viewModel.toggleHideUser(currentUserId: uid, familyUserId: member.id)
-                                        }
-                                    }
+                                    memberToReport = member
+                                    reportReason = ""
+                                    showReportAlert = true
                                 } label: {
-                                    Label("Unblock", systemImage: "checkmark.circle")
+                                    Label("Report User", systemImage: "exclamationmark.bubble")
                                 }
-                                .tint(.green)
-                            } else {
-                                Button {
-                                    Task {
-                                        if let uid = auth.userId {
-                                            await viewModel.toggleHideUser(currentUserId: uid, familyUserId: member.id)
+                                
+                                if viewModel.hiddenUserIds.contains(member.id) {
+                                    Button {
+                                        Task {
+                                            if let uid = auth.userId {
+                                                await viewModel.toggleHideUser(currentUserId: uid, familyUserId: member.id)
+                                            }
                                         }
+                                    } label: {
+                                        Label("Unblock User", systemImage: "checkmark.circle")
                                     }
-                                } label: {
-                                    Label("Block", systemImage: "hand.raised.slash")
+                                } else {
+                                    Button(role: .destructive) {
+                                        Task {
+                                            if let uid = auth.userId {
+                                                await viewModel.toggleHideUser(currentUserId: uid, familyUserId: member.id)
+                                            }
+                                        }
+                                    } label: {
+                                        Label("Block User", systemImage: "hand.raised.slash")
+                                    }
                                 }
-                                .tint(.orange)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.title3)
+                                    .foregroundColor(.gray)
                             }
                         }
                     }
