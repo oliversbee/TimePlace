@@ -89,8 +89,9 @@ struct SettingsView: View {
                                     .environmentObject(settingsViewModel)
                             } label: {
                                 HStack {
-                                    SettingsIcon(systemName: "checkmark", color: .orange)
-                                    Text(device.name.isEmpty ? "My Frame" : device.name)
+                                    SettingsIcon(systemName: "slider.horizontal.3", color: .orange)
+                                    // CHANGED: Hardcoded to "Options"
+                                    Text("Options")
                                     Spacer()
                                 }
                             }
